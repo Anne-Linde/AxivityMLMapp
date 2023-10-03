@@ -8,7 +8,12 @@
 # Path to the original data files of measurement period 1
 filepath.axivity <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1"
 outputdir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec"
-# Apply function
+
+# source functions directly from file, to be replaced by package installation:
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
+
+# Structure raw files into 5-sec epochdata
 load.structure.axivity(filepath = paste0(filepath.axivity, "/wave1"), outputdir = outputdir, processeddir = paste0(outputdir, "/output_wave1")) 
 load.structure.axivity(filepath = paste0(filepath.axivity, "/wave2"), outputdir = outputdir, processeddir = paste0(outputdir, "/output_wave2")) 
 
