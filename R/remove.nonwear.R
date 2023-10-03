@@ -28,13 +28,15 @@ remove.nonwear <- function(epochdir.hip, epochdir.wrist, savefolder){
     
     load(paste(epochdir, filelist[file], sep = "/")) # Load .RData file
     
-    if(nrow(epochdata) > 0){
-      index_nw <- which(epochdata$nonwear == 1) 
+    if(nrow(epochdata$agg.epoch) > 0){
+      index_nw <- which(epochdata$agg.epoch$nonwear == 1) 
       #index_nw <- c(which(data_day[[day]]$additonal_nonwear == 1), which(data_day[[day]]$nonwear == 1))
       if(length(index_nw) > 1){
-        epochdata <- epochdata[-index_nw,] # Remove non-wear data
+        epochdata$agg.epoch <- epochdata$agg.epoch[-index_nw,] # Remove non-wear data
       }
     }
+    if(nrow(epochdata$agg.epoch) > 0){
     save(epochdata, file = paste0(epochdir, savefolder, filelist[file])) # Save data that meets the valid day criterion
     } 
+  }
 }

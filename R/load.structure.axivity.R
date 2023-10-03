@@ -23,7 +23,7 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
     overwrite = FALSE, #FALSE = do not overwrite data if milestone data already exists -> N.B. if includedaycrit changes, data needs to be overwritten?
     do.parallel = FALSE,
     mode = c(1,2), 
-    do.report = c(2),
+    do.report = FALSE,
     
     #study protocol
     strategy = 1, #analyze all available data
@@ -87,8 +87,7 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
           scores = IMP$rout[rep(1:nrow(IMP$rout), each = NlongInsideShort),]
           colnames(scores) = c("nonwear", "clipping", "additonal_nonwear", "studyprotocol", "all") # add column names
           IMP$metashort = cbind(IMP$metashort, scores) # combine scores with the epoch level time series
-          epochdata <- IMP$metashort
-          
+          epochdata <- list(agg.epoch = IMP$metashort, day.metrics = SUM$daysummary)
           save(epochdata, file = filename)
         }
       }

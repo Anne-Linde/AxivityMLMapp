@@ -7,6 +7,7 @@
   
 # Path to the original data files of measurement period 1
 filepath.axivity <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1"
+outputdir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec"
 # Apply function
 load.structure.axivity(filepath = paste0(filepath.axivity, "/wave1"), outputdir = outputdir, processeddir = paste0(outputdir, "/output_wave1")) 
 load.structure.axivity(filepath = paste0(filepath.axivity, "/wave2"), outputdir = outputdir, processeddir = paste0(outputdir, "/output_wave2")) 
