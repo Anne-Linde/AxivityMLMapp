@@ -48,13 +48,13 @@ estimates.axivity <- function(validdatadir, analysis = "reliability"){
       
       # Select metrics for day already calculated
       a <- valid_days$metrics_day[which(as.Date(names(valid_days$data_day[day])) == as.Date(valid_days$metrics_day$calendar_date)),]
-      ENMO <- c(ENMO, as.double(a$`mean_ENMO_mg_0-24hr`))
+      ENMO <- c(ENMO, mean(valid_days$data_day[[day]]$ENMO)*1000)
       ig_ENMO <- c(ig_ENMO, as.double(a$`ig_gradient_ENMO_0-24hr`))
       M60_ENMO <- c(M60_ENMO, as.double(a$`p95.83333_ENMO_mg_0-24hr`))
       M30_ENMO <- c(M30_ENMO, as.double(a$`p97.91667_ENMO_mg_0-24hr`))
       M10_ENMO <- c(M10_ENMO, as.double(a$`p99.30556_ENMO_mg_0-24hr`))
       L5_ENMO <- c(L5_ENMO, as.double(a$`L5_ENMO_mg_0-24hr`))
-      MAD <- c(MAD, as.double(a$`mean_MAD_mg_0-24hr`))
+      MAD <- c(MAD, mean(valid_days$data_day[[day]]$MAD)*1000)
       ig_MAD <- c(ig_MAD, as.double(a$`ig_gradient_MAD_0-24hr`))
       M60_MAD <- c(M60_MAD, as.double(a$`p95.83333_MAD_mg_0-24hr`))
       M30_MAD <- c(M30_MAD, as.double(a$`p97.91667_MAD_mg_0-24hr`))
@@ -68,8 +68,8 @@ estimates.axivity <- function(validdatadir, analysis = "reliability"){
       acc_x_25 <- c(acc_x_25, quantile(valid_days$data_day[[day]]$roll_med_acc_x)[2]*1000)
       acc_y_25 <- c(acc_y_25, quantile(valid_days$data_day[[day]]$roll_med_acc_y)[2]*1000)
       acc_z_25 <- c(acc_z_25, quantile(valid_days$data_day[[day]]$roll_med_acc_z)[2]*1000)
-      ENMO_25 <- c(ENMO_25, quantile(as.double(a$`mean_ENMO_mg_0-24hr`), na.rm = TRUE)[2]*1000)
-      MAD_25 <- c(MAD_25, quantile(as.double(a$`mean_MAD_mg_0-24hr`), na.rm = TRUE)[2]*1000)
+      ENMO_25 <- c(ENMO_25, quantile(as.double(mean(valid_days$data_day[[day]]$ENMO)), na.rm = TRUE)[2]*1000)
+      MAD_25 <- c(MAD_25, quantile(as.double(mean(valid_days$data_day[[day]]$MAD)), na.rm = TRUE)[2]*1000)
       
       # Save additional information
       id <- c(id, name[1])
@@ -108,7 +108,10 @@ estimates.axivity <- function(validdatadir, analysis = "reliability"){
   axivity.estimates$M10_MAD <- as.numeric(axivity.estimates$M10_MAD)
   axivity.estimates$L5_MAD <- as.numeric(axivity.estimates$L5_MAD)
   
-  save(axivity.estimates, file = paste(validdatadir, "axivity.estimates.RData", sep = "/"))     # Save data that meets the valid day criterion
+  if (!file.exists(paste0(validdatadir, "/results"))){
+    dir.create(file.path(paste0(validdatadir, "/results")))
+  }
+  save(axivity.estimates, file = paste0(validdatadir, "/results/axivity.estimates.RData"))     # Save data that meets the valid day criterion
   
   return(axivity.estimates)
 }
