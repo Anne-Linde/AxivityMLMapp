@@ -28,20 +28,27 @@ validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 
       data_day[which(valid_days == FALSE)] <- NULL # Remove the invalid days
     }
     if(length(data_day) >= mindays){
-      if(analysis == "reliability" & length(data_day) > 7){
-          # Select the data from measurement period 1
+      if(analysis == "reliability"){ # Exact 7 different days are required
+        if(length(data_day) > 7){ # Select the data from measurement period 1
           pp_id <- strsplit(filelist[file], "_")[[1]][1]
           startdate <- castordata$Date_measurement_period_1[which(castordata$Participant.Id == pp_id)]
           period <- as.Date(startdate, format="%d-%m-%Y") + 1:7
-
+          
           index_days <- c()
           for (day in 1:length(period)) {
-             index_days <- c(index_days, which(names(data_day) == period[day]))
-           }
-           data_day <- data_day[index_days] # Select only days within measurement period
-    }
-    valid_days <- list(data_day = data_day, metrics_day = epochdata$day.metrics)
-    save(valid_days, file = paste(savedir, filelist[file], sep = "/")) # Save data that meets the valid day criterion
+            index_days <- c(index_days, which(names(data_day) == period[day]))
+          }
+          data_day <- data_day[index_days] # Select only days within measurement period
+        }
+        if(length(unique(weekdays(as.Date(names(data_day))))) == 7){ # Save data if there are 7 different days
+          valid_days <- list(data_day = data_day, metrics_day = epochdata$day.metrics)
+          save(valid_days, file = paste(savedir, filelist[file], sep = "/")) # Save data that meets the valid day criterion
+        }
+      }
+      if(analysis == ""){
+        valid_days <- list(data_day = data_day, metrics_day = epochdata$day.metrics)
+        save(valid_days, file = paste(savedir, filelist[file], sep = "/")) # Save data that meets the valid day criterion
+      }
   }
   }
 }
