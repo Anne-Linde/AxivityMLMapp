@@ -12,7 +12,7 @@
 #' @export
 
 load.app <- function(filepath, filename, cohort, measurementperiod) {
-  data.app <- read.csv(paste0(filepath, filename), sep = ";")[, -1] # Load in app data, skip first row numbering
+  data.app <- read.csv(paste0(filepath, filename), sep = c(",", ";"))[, -1] # Load in app data, skip first row numbering
   data.app <- data.app[data.app$measurement == measurementperiod, ] #Select data for measurement period
   tmp.data <- data.frame()
   for(coh in 1:length(cohort)){
