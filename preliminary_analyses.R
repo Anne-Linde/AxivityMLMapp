@@ -1,145 +1,277 @@
-# User settings
-# filepath.app <- "M:/projecten/2019/My Little Moves/Dataverzameling/Data/My Little Moves app/cleanMLMappdata/"
-# filename.app <- "20230209_activities_castor_linked.csv" # contains all filled in activities
-# filepath.castor <- "M:/projecten/2019/My Little Moves/Dataverzameling/Data/Castor/20230209/"
-# filename.castor <- "Study/My_Little_Moves_export_20230209.csv"
-# filepath.axivity <- "M:/projecten/2019/My Little Moves/Dataverzameling/Data/Accelerometer/Measurement period 1/"
-
-filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/13dec2022"
-filename.app <- "/20230206_activities_castor_linked.csv"
+## User settings
+# Directory path and name of castor export file
 filepath.castor <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Castor export"
-filename.castor <- "/20230206/Study/My_Little_Moves_export_20230206.csv"
-filepath.axivity <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1"
+filename.castor <- "/20230918/Study/My_Little_Moves_export_20230918.csv"
+# Directory path and name of app data (frequency and duration per day)
+filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
+filename.app <- "/20230918_MLMapp_activiteit_gedrag_duur_per_dag.csv"
+# Directory path for epochdata hip and wrist
+epochdir.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/hip/nonwear_removed"
+epochdir.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/wrist/nonwear_removed"
 
-# TO DO: load all .R scripts
+# source functions directly from file, to be replaced by package installation:
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
-## Load data
+# TO DO: 
+# - check normality of continuous data using Shaphiro-Wilks test (accelerometry)
+# - check normality of app data
+# - split analyses from step 3 into age groups/milestone groups?
+
+# Load in Castor data (this file includes participant characteristics)
 data.castor <- load.castor(filepath.castor, filename.castor, cohort = 3)
 
-## App data
-data.app <- load.app(filepath.app, filename.app, cohort = 3) # TO DO: app data per dag
-
-## Axivity
-# Load and structure acceleration data into 5-sec epochs
-outputdir <- paste0(filepath.axivity, "/5sec")
-filepath.processedData <- paste0(outputdir, "/output_Measurement1")
-
-# start <- as.POSIXct(data.castor$Date_measurement_period_1, format="%d-%m-%Y") # Initial accelerometer start date
-# comments.axivity <- data.castor$Comments_Acc_1 # Comments
-# #start[7] <- as.POSIXct("21-10-2022", format="%d-%m-%Y") # Change start date of [7] to 21-10-2022
-# start.axivity <- list(id = id, date = start)
-load.structure.axivity(filepath = filepath.axivity, outputdir = outputdir, processeddir = filepath.processedData) 
-
+### Axivity ###
 ## Step 1: Determine the length of one day of data
-epochdir.hip <- paste0(filepath.processedData, "/epochdata/hip")
-epochdir.wrist <- paste0(filepath.processedData, "/epochdata/wrist")
-
 # Number of accelerometer files at start
 filelist.hip <- list.files(epochdir.hip, pattern = ".RData")
 filelist.wrist <- list.files(epochdir.hip, pattern = ".RData")
 paste0("accelerometer files hip: ", length(filelist.hip))
 paste0("accelerometer files wrist: ", length(filelist.wrist))
 
-# Select files that provide > 8 hours on one day
-savedir.hip <- paste0(epochdir.hip, "/8h1d")
-preprocess.axivity(epochdir.hip, epochlength = 5, minhours = 8, mindays = 1, savedir = savedir.hip, castordata = data.castor) 
-
-savedir.wrist <- paste0(epochdir.wrist, "/8h1d")
-preprocess.axivity(epochdir.wrist, epochlength = 5, minhours = 8, mindays = 1, savedir = savedir.wrist, castordata = data.castor)
-
+# Select files that provide => 8 hours on one day
+savedir.hip <- paste0(epochdir.hip, "/1d8h")
+validday.axivity(epochdir.hip, epochlength = 5, minhours = 8, mindays = 1, savedir = savedir.hip, data.castor) 
+savedir.wrist <- paste0(epochdir.wrist, "/1d8h")
+validday.axivity(epochdir.wrist, epochlength = 5, minhours = 8, mindays = 1, savedir = savedir.wrist, data.castor)
 paste0("hip: accelerometer files that provide > 8 h on one day: ", length(list.files(savedir.hip, pattern = ".RData")))
 paste0("wrist: accelerometer files that provide > 8 h on one day: ", length(list.files(savedir.wrist, pattern = ".RData")))
 
 # Apply the 70/80 rule
-weartime.hip <- apply.7080rule(savedir.hip)
+weartime.hip <- apply.7080rule(savedir.hip, method = "axivity")
 paste0("minimum required wear time hip: ", weartime.hip, " min (", weartime.hip/60, " h)")
-weartime.wrist <- apply.7080rule(savedir.wrist)
+weartime.wrist <- apply.7080rule(savedir.wrist, method = "axivity")
 paste0("minimum required wear time wrist: ", weartime.wrist, " min (", weartime.wrist/60, " h)")
 
 ## Step 2: Preparing data for analyses - Process the data for files with 7 complete days
-savedir.hip <- paste0(epochdir.hip, "/17h7d")
-preprocess.axivity(epochdir = epochdir.hip, epochlength = 5, minhours = 17, mindays = 7, savedir = savedir.hip, castordata = data.castor)
-paste0("hip: accelerometer files that provide 7 days of at least 17 h: ", length(list.files(savedir.hip, pattern = ".RData")))
-axivity.outcomes.hip <- outcomes.axivity(savedir.hip) # Generate the outcomes per accelerometer recording (per day)
+savedir.hip <- paste0(epochdir.hip, "/7d16h")
+validday.axivity(epochdir = epochdir.hip, epochlength = 5, minhours = 16, mindays = 7, savedir = savedir.hip, data.castor, analysis = "reliability")
+paste0("hip: accelerometer files that provide 7 days of at least 16 h: ", length(list.files(savedir.hip, pattern = ".RData")))
+savedir.wrist <- paste0(epochdir.wrist, "/7d16h")
+validday.axivity(epochdir = epochdir.wrist, epochlength = 5, minhours = 16, mindays = 7, savedir = savedir.wrist, data.castor, analysis = "reliability") 
+paste0("wrist: accelerometer files that provide 7 days of at least 16 h: ", length(list.files(savedir.wrist, pattern = ".RData")))
 
-savedir.wrist <- paste0(epochdir.wrist, "/17h7d")
-preprocess.axivity(epochdir = epochdir.wrist, epochlength = 5, minhours = 17, mindays = 7, savedir = savedir.wrist, castordata = data.castor) 
-paste0("wrist: accelerometer files that provide 7 days of at least 17 h: ", length(list.files(savedir.wrist, pattern = ".RData")))
-axivity.outcomes.wrist <- outcomes.axivity(savedir.wrist) # Generate the outcomes per accelerometer recording (per day)
+# Generate the outcomes per accelerometer recording (per day)
+axivity.estimates.hip <- estimates.axivity(savedir.hip) 
+axivity.estimates.wrist <- estimates.axivity(savedir.wrist)
 
-# Step 3: Weekend day inclusion?
+## Step 3: Weekend day inclusion?
 library(dplyr)
 # Hip
-group_by(axivity.outcomes.hip, weekday) %>% 
-  summarise_at(c("ENMO_25", "avg_ENMO"), # c("acc_x_25", "acc_y_25", "acc_z_25", "ENMO_25", 
-               #                  "avg_acc_x", "avg_acc_y", "avg_acc_z", "avg_ENMO")
-               list(median = median, IQR = quantile))
-# res_hip_acc_x_25 <- wilcox.test(acc_x_25 ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-# res_hip_acc_y_25 <- wilcox.test(acc_y_25 ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-# res_hip_acc_z_25 <- wilcox.test(acc_z_25 ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-res_hip_ENMO_25 <- wilcox.test(ENMO_25 ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-z_ENMO_25 <- qnorm(res_hip_ENMO_25$p.value/2)
-# res_hip_avg_acc_x <- wilcox.test(avg_acc_x ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-# res_hip_avg_acc_y <- wilcox.test(avg_acc_y ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-# res_hip_avg_acc_z <- wilcox.test(avg_acc_z ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-res_hip_avg_ENMO <- wilcox.test(avg_ENMO ~ weekday, data = axivity.outcomes.hip, paired = FALSE)
-z_avg_ENMO <- qnorm(res_hip_avg_ENMO$p.value/2)
+desc.weekend.hip <- group_by(axivity.estimates.hip, weekday) %>% 
+  summarise_at(c("ENMO", "ENMO_25", "ig_ENMO", "M60_ENMO", "M30_ENMO", "M10_ENMO", "L5_ENMO",
+                 "MAD", "MAD_25", "ig_MAD", "M60_MAD", "M30_MAD", "M10_MAD", "L5_MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+View(desc.weekend.hip[c(2,4,7,9),])
+
+res_ENMO.hip <- wilcox.test(ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_ENMO.hip <- qnorm(res_ENMO.hip$p.value/2)
+res_ENMO_25.hip <- wilcox.test(ENMO_25 ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_ENMO_25.hip <- qnorm(res_ENMO_25.hip$p.value/2)
+res_ig_ENMO.hip <- wilcox.test(ig_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_ig_ENMO.hip <- qnorm(res_ig_ENMO.hip$p.value/2)
+res_M60_ENMO.hip <- wilcox.test(M60_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_M60_ENMO.hip <- qnorm(res_M60_ENMO.hip$p.value/2)
+res_M30_ENMO.hip <- wilcox.test(M30_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_M30_ENMO.hip <- qnorm(res_M30_ENMO.hip$p.value/2)
+res_M10_ENMO.hip <- wilcox.test(M10_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_M10_ENMO.hip <- qnorm(res_M10_ENMO.hip$p.value/2)
+res_L5_ENMO.hip <- wilcox.test(L5_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_L5_ENMO.hip <- qnorm(res_L5_ENMO.hip$p.value/2)
+
+res_MAD.hip <- wilcox.test(MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_MAD.hip <- qnorm(res_MAD.hip$p.value/2)
+res_MAD_25.hip <- wilcox.test(MAD_25 ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_MAD_25.hip <- qnorm(res_MAD_25.hip$p.value/2)
+res_ig_MAD.hip <- wilcox.test(ig_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_ig_MAD.hip <- qnorm(res_ig_MAD.hip$p.value/2)
+res_M60_MAD.hip <- wilcox.test(M60_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_M60_MAD.hip <- qnorm(res_M60_MAD.hip$p.value/2)
+res_M30_MAD.hip <- wilcox.test(M30_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_M30_MAD.hip <- qnorm(res_M30_MAD.hip$p.value/2)
+res_M10_MAD.hip <- wilcox.test(M10_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_M10_MAD.hip <- qnorm(res_M10_MAD.hip$p.value/2)
+res_L5_MAD.hip <- wilcox.test(L5_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+z_L5_MAD.hip <- qnorm(res_L5_MAD.hip$p.value/2)
 
 # Wrist
-group_by(axivity.outcomes.wrist, weekday) %>% 
-  summarise_at(c("ENMO_25", "avg_ENMO"), 
-               list(median = median, IQR = quantile))
-# res_wrist_acc_x_25 <- wilcox.test(acc_x_25 ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-# res_wrist_acc_y_25 <- wilcox.test(acc_y_25 ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-# res_wrist_acc_z_25 <- wilcox.test(acc_z_25 ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-res_wrist_ENMO_25 <- wilcox.test(ENMO_25 ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-z_ENMO_25 <- qnorm(res_wrist_ENMO_25$p.value/2)
-# res_wrist_avg_acc_x <- wilcox.test(avg_acc_x ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-# res_wrist_avg_acc_y <- wilcox.test(avg_acc_y ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-# res_wrist_avg_acc_z <- wilcox.test(avg_acc_z ~ weekday, data = axivity.outcomes.wrist, paired = FALSE)
-res_wrist_avg_ENMO <- wilcox.test(avg_ENMO ~ weekday, data = axivity.outcomes.wrist, paired = FALSE) 
-z_avg_ENMO <- qnorm(res_wrist_avg_ENMO$p.value/2)
+desc.weekend.wrist <- group_by(axivity.estimates.wrist, weekday) %>% 
+  summarise_at(c("ENMO", "ENMO_25", "ig_ENMO", "M60_ENMO", "M30_ENMO", "M10_ENMO", "L5_ENMO",
+                 "MAD", "MAD_25", "ig_MAD", "M60_MAD", "M30_MAD", "M10_MAD", "L5_MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+View(desc.weekend.wrist[c(2,4,7,9),])
 
-#% Step 4: Day-to-day variability
+res_ENMO.wrist <- wilcox.test(ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_ENMO.wrist <- qnorm(res_ENMO.wrist$p.value/2)
+res_ENMO_25.wrist <- wilcox.test(ENMO_25 ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_ENMO_25.wrist <- qnorm(res_ENMO_25.wrist$p.value/2)
+res_ig_ENMO.wrist <- wilcox.test(ig_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_ig_ENMO.wrist <- qnorm(res_ig_ENMO.wrist$p.value/2)
+res_M60_ENMO.wrist <- wilcox.test(M60_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_M60_ENMO.wrist <- qnorm(res_M60_ENMO.wrist$p.value/2)
+res_M30_ENMO.wrist <- wilcox.test(M30_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_M30_ENMO.wrist <- qnorm(res_M30_ENMO.wrist$p.value/2)
+res_M10_ENMO.wrist <- wilcox.test(M10_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_M10_ENMO.wrist <- qnorm(res_M10_ENMO.wrist$p.value/2)
+res_L5_ENMO.wrist <- wilcox.test(L5_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_L5_ENMO.wrist <- qnorm(res_L5_ENMO.wrist$p.value/2)
+
+res_MAD.wrist <- wilcox.test(MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_MAD.wrist <- qnorm(res_MAD.wrist$p.value/2)
+res_MAD_25.wrist <- wilcox.test(MAD_25 ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_MAD_25.wrist <- qnorm(res_MAD_25.wrist$p.value/2)
+res_ig_MAD.wrist <- wilcox.test(ig_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_ig_MAD.wrist <- qnorm(res_ig_MAD.wrist$p.value/2)
+res_M60_MAD.wrist <- wilcox.test(M60_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_M60_MAD.wrist <- qnorm(res_M60_MAD.wrist$p.value/2)
+res_M30_MAD.wrist <- wilcox.test(M30_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_M30_MAD.wrist <- qnorm(res_M30_MAD.wrist$p.value/2)
+res_M10_MAD.wrist <- wilcox.test(M10_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_M10_MAD.wrist <- qnorm(res_M10_MAD.wrist$p.value/2)
+res_L5_MAD.wrist <- wilcox.test(L5_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+z_L5_MAD.wrist <- qnorm(res_L5_MAD.wrist$p.value/2)
+
+## Step 4: Day-to-day variability
 # Hip
-day_day_ENMO_25.hip <- friedman.test(y = axivity.outcomes.hip$ENMO_25, groups = axivity.outcomes.hip$days, blocks = axivity.outcomes.hip$id)
-day_day_ENMO.hip <- friedman.test(y = axivity.outcomes.hip$avg_ENMO, groups = axivity.outcomes.hip$days, blocks = axivity.outcomes.hip$id)
+day_day_ENMO.hip <- friedman.test(y = axivity.estimates.hip$ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_ENMO_25.hip <- friedman.test(y = axivity.estimates.hip$ENMO_25, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_ig_ENMO.hip <- friedman.test(y = axivity.estimates.hip$ig_ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_M60_ENMO.hip <- friedman.test(y = axivity.estimates.hip$M60_ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_M30_ENMO.hip <- friedman.test(y = axivity.estimates.hip$M30_ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_M10_ENMO.hip <- friedman.test(y = axivity.estimates.hip$M10_ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_L5_ENMO.hip <- friedman.test(y = axivity.estimates.hip$L5_ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+
+day_day_MAD.hip <- friedman.test(y = axivity.estimates.hip$MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_MAD_25.hip <- friedman.test(y = axivity.estimates.hip$MAD_25, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_ig_MAD.hip <- friedman.test(y = axivity.estimates.hip$ig_MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_M60_MAD.hip <- friedman.test(y = axivity.estimates.hip$M60_MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_M30_MAD.hip <- friedman.test(y = axivity.estimates.hip$M30_MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_M10_MAD.hip <- friedman.test(y = axivity.estimates.hip$M10_MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
+day_day_L5_MAD.hip <- friedman.test(y = axivity.estimates.hip$L5_MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
 
 # Wrist
-day_day_ENMO_25.wrist <- friedman.test(y = axivity.outcomes.wrist$ENMO_25, groups = axivity.outcomes.wrist$days, blocks = axivity.outcomes.wrist$id)
-day_day_ENMO.wrist <- friedman.test(y = axivity.outcomes.wrist$avg_ENMO, groups = axivity.outcomes.wrist$days, blocks = axivity.outcomes.wrist$id)
+day_day_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_ENMO_25.wrist <- friedman.test(y = axivity.estimates.wrist$ENMO_25, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_ig_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$ig_ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_M60_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$M60_ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_M30_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$M30_ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_M10_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$M10_ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_L5_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$L5_ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+
+day_day_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_MAD_25.wrist <- friedman.test(y = axivity.estimates.wrist$MAD_25, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_ig_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$ig_MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_M60_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$M60_MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_M30_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$M30_MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_M10_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$M10_MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
+day_day_L5_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$L5_MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
 
 # No differences
-# Differences: explore why / days due to illnes??
+# Differences: explore why / days due to illness??
 
 ## Step 5: Determine single day intra-class correlations
 # Run intra-class correlations (ICC). Random consistency models, using single measure, ICC(2,1). Single measure is ICC for single day.
 # Hip
-ratings_avgENMO.hip_long <- as.data.frame(cbind(axivity.outcomes.hip$id, axivity.outcomes.hip$days, axivity.outcomes.hip$avg_ENMO))
-names(ratings_avgENMO.hip_long) <- c("id", "days", "avgENMO")
-ratings_avgENMO.hip_long$avgENMO <- as.numeric(ratings_avgENMO.hip_long$avgENMO)
-ratings_avgENMO.hip  <- reshape(ratings_avgENMO.hip_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.avgENMO.hip <- irr::icc(ratings_avgENMO.hip[,-1], model = "twoway", type = "agreement")
+ratings.hip  <- reshape(axivity.estimates.hip, idvar = "days", timevar = "id", direction = "wide")
 
+ratings_ENMO.hip_long <- as.data.frame(cbind(axivity.estimates.hip$id, axivity.estimates.hip$days, axivity.estimates.hip$ENMO))
+names(ratings_ENMO.hip_long) <- c("id", "days", "ENMO")
+ratings_ENMO.hip_long$ENMO <- as.numeric(ratings_ENMO.hip_long$ENMO)
+ratings_ENMO.hip  <- reshape(ratings_ENMO.hip_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.ENMO.hip <- irr::icc(ratings_ENMO.hip[,-1], model = "twoway", type = "consistency")
 
-ratings_25ENMO.hip_long <- as.data.frame(cbind(axivity.outcomes.hip$id, axivity.outcomes.hip$days, axivity.outcomes.hip$ENMO_25))
-names(ratings_25ENMO.hip_long) <- c("id", "days", "ENMO25")
-ratings_25ENMO.hip_long$ENMO25 <- as.numeric(ratings_25ENMO.hip_long$ENMO25)
-ratings_25ENMO.hip  <- reshape(ratings_25ENMO.hip_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.25ENMO.hip <- irr::icc(ratings_25ENMO.hip[,-1], model = "twoway", type = "agreement")
+ratings_ENMO_25.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "ENMO_25.")]
+ICC.ENMO_25.hip <- irr::icc(ratings_ENMO_25.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_ig_ENMO.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "ig_ENMO.")]
+ratings_ig_ENMO.hip_long <- ratings_ig_ENMO.hip_long[ , colSums(is.na(ratings_ig_ENMO.hip_long))==0] #omit NA columns
+ICC.ig_ENMO.hip <- irr::icc(ratings_ig_ENMO.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_M60_ENMO.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "M60_ENMO.")]
+ratings_M60_ENMO.hip_long <- ratings_M60_ENMO.hip_long[ , colSums(is.na(ratings_M60_ENMO.hip_long))==0] #omit NA columns
+ICC.M60_ENMO.hip <- irr::icc(ratings_M60_ENMO.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_M30_ENMO.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "M30_ENMO.")]
+ratings_M30_ENMO.hip_long <- ratings_M30_ENMO.hip_long[ , colSums(is.na(ratings_M30_ENMO.hip_long))==0] #omit NA columns
+ICC.M30_ENMO.hip <- irr::icc(ratings_M30_ENMO.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_M10_ENMO.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "M10_ENMO.")]
+ratings_M10_ENMO.hip_long <- ratings_M10_ENMO.hip_long[ , colSums(is.na(ratings_M10_ENMO.hip_long))==0] #omit NA columns
+ICC.M10_ENMO.hip <- irr::icc(ratings_M10_ENMO.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_L5_ENMO.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "L5_ENMO.")]
+ratings_L5_ENMO.hip_long <- ratings_L5_ENMO.hip_long[ , colSums(is.na(ratings_L5_ENMO.hip_long))==0] #omit NA columns
+ICC.L5_ENMO.hip <- irr::icc(ratings_L5_ENMO.hip_long[,-1], model = "twoway", type = "consistency")
+
+ratings_MAD.hip_long <- as.data.frame(cbind(axivity.estimates.hip$id, axivity.estimates.hip$days, axivity.estimates.hip$MAD))
+names(ratings_MAD.hip_long) <- c("id", "days", "MAD")
+ratings_MAD.hip_long$MAD <- as.numeric(ratings_MAD.hip_long$MAD)
+ratings_MAD.hip  <- reshape(ratings_MAD.hip_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.MAD.hip <- irr::icc(ratings_MAD.hip[,-1], model = "twoway", type = "consistency")
+
+ratings_MAD_25.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "MAD_25.")]
+ICC.MAD_25.hip <- irr::icc(ratings_MAD_25.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_ig_MAD.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "ig_MAD.")]
+ratings_ig_MAD.hip_long <- ratings_ig_MAD.hip_long[ , colSums(is.na(ratings_ig_MAD.hip_long))==0] #omit NA columns
+ICC.ig_MAD.hip <- irr::icc(ratings_ig_MAD.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_M60_MAD.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "M60_MAD.")]
+ratings_M60_MAD.hip_long <- ratings_M60_MAD.hip_long[ , colSums(is.na(ratings_M60_MAD.hip_long))==0] #omit NA columns
+ICC.M60_MAD.hip <- irr::icc(ratings_M60_MAD.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_M30_MAD.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "M30_MAD.")]
+ratings_M30_MAD.hip_long <- ratings_M30_MAD.hip_long[ , colSums(is.na(ratings_M30_MAD.hip_long))==0] #omit NA columns
+ICC.M30_MAD.hip <- irr::icc(ratings_M30_MAD.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_M10_MAD.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "M10_MAD.")]
+ratings_M10_MAD.hip_long <- ratings_M10_MAD.hip_long[ , colSums(is.na(ratings_M10_MAD.hip_long))==0] #omit NA columns
+ICC.M10_MAD.hip <- irr::icc(ratings_M10_MAD.hip_long[,-1], model = "twoway", type = "consistency")
+ratings_L5_MAD.hip_long <- ratings.hip[,stringr::str_detect(names(ratings.hip), "L5_MAD.")]
+ratings_L5_MAD.hip_long <- ratings_L5_MAD.hip_long[ , colSums(is.na(ratings_L5_MAD.hip_long))==0] #omit NA columns
+ICC.L5_MAD.hip <- irr::icc(ratings_L5_MAD.hip_long[,-1], model = "twoway", type = "consistency")
 
 # Wrist
-ratings_avgENMO.wrist_long <- as.data.frame(cbind(axivity.outcomes.wrist$id, axivity.outcomes.wrist$days, axivity.outcomes.wrist$avg_ENMO))
-names(ratings_avgENMO.wrist_long) <- c("id", "days", "avgENMO")
-ratings_avgENMO.wrist_long$avgENMO <- as.numeric(ratings_avgENMO.wrist_long$avgENMO)
-ratings_avgENMO.wrist  <- reshape(ratings_avgENMO.wrist_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.avgENMO.wrist <- irr::icc(ratings_avgENMO.wrist[,-1], model = "twoway", type = "agreement")
+ratings.wrist  <- reshape(axivity.estimates.wrist, idvar = "days", timevar = "id", direction = "wide")
 
-ratings_25ENMO.wrist_long <- as.data.frame(cbind(axivity.outcomes.wrist$id, axivity.outcomes.wrist$days, axivity.outcomes.wrist$ENMO_25))
-names(ratings_25ENMO.wrist_long) <- c("id", "days", "ENMO25")
-ratings_25ENMO.wrist_long$ENMO25 <- as.numeric(ratings_25ENMO.wrist_long$ENMO25)
-ratings_25ENMO.wrist  <- reshape(ratings_25ENMO.wrist_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.25ENMO.wrist <- irr::icc(ratings_25ENMO.wrist[,-1], model = "twoway", type = "agreement")
+ratings_ENMO.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$ENMO))
+names(ratings_ENMO.wrist_long) <- c("id", "days", "ENMO")
+ratings_ENMO.wrist_long$ENMO <- as.numeric(ratings_ENMO.wrist_long$ENMO)
+ratings_ENMO.wrist  <- reshape(ratings_ENMO.wrist_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.ENMO.wrist <- irr::icc(ratings_ENMO.wrist[,-1], model = "twoway", type = "consistency")
+
+ratings_ENMO_25.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "ENMO_25.")]
+ICC.ENMO_25.wrist <- irr::icc(ratings_ENMO_25.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_ig_ENMO.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "ig_ENMO.")]
+ratings_ig_ENMO.wrist_long <- ratings_ig_ENMO.wrist_long[ , colSums(is.na(ratings_ig_ENMO.wrist_long))==0] #omit NA columns
+ICC.ig_ENMO.wrist <- irr::icc(ratings_ig_ENMO.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_M60_ENMO.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "M60_ENMO.")]
+ratings_M60_ENMO.wrist_long <- ratings_M60_ENMO.wrist_long[ , colSums(is.na(ratings_M60_ENMO.wrist_long))==0] #omit NA columns
+ICC.M60_ENMO.wrist <- irr::icc(ratings_M60_ENMO.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_M30_ENMO.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "M30_ENMO.")]
+ratings_M30_ENMO.wrist_long <- ratings_M30_ENMO.wrist_long[ , colSums(is.na(ratings_M30_ENMO.wrist_long))==0] #omit NA columns
+ICC.M30_ENMO.wrist <- irr::icc(ratings_M30_ENMO.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_M10_ENMO.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "M10_ENMO.")]
+ratings_M10_ENMO.wrist_long <- ratings_M10_ENMO.wrist_long[ , colSums(is.na(ratings_M10_ENMO.wrist_long))==0] #omit NA columns
+ICC.M10_ENMO.wrist <- irr::icc(ratings_M10_ENMO.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_L5_ENMO.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "L5_ENMO.")]
+ratings_L5_ENMO.wrist_long <- ratings_L5_ENMO.wrist_long[ , colSums(is.na(ratings_L5_ENMO.wrist_long))==0] #omit NA columns
+ICC.L5_ENMO.wrist <- irr::icc(ratings_L5_ENMO.wrist_long[,-1], model = "twoway", type = "consistency")
+
+ratings_MAD.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$MAD))
+names(ratings_MAD.wrist_long) <- c("id", "days", "MAD")
+ratings_MAD.wrist_long$MAD <- as.numeric(ratings_MAD.wrist_long$MAD)
+ratings_MAD.wrist  <- reshape(ratings_MAD.wrist_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.MAD.wrist <- irr::icc(ratings_MAD.wrist[,-1], model = "twoway", type = "consistency")
+
+ratings_MAD_25.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "MAD_25.")]
+ICC.MAD_25.wrist <- irr::icc(ratings_MAD_25.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_ig_MAD.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "ig_MAD.")]
+ratings_ig_MAD.wrist_long <- ratings_ig_MAD.wrist_long[ , colSums(is.na(ratings_ig_MAD.wrist_long))==0] #omit NA columns
+ICC.ig_MAD.wrist <- irr::icc(ratings_ig_MAD.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_M60_MAD.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "M60_MAD.")]
+ratings_M60_MAD.wrist_long <- ratings_M60_MAD.wrist_long[ , colSums(is.na(ratings_M60_MAD.wrist_long))==0] #omit NA columns
+ICC.M60_MAD.wrist <- irr::icc(ratings_M60_MAD.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_M30_MAD.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "M30_MAD.")]
+ratings_M30_MAD.wrist_long <- ratings_M30_MAD.wrist_long[ , colSums(is.na(ratings_M30_MAD.wrist_long))==0] #omit NA columns
+ICC.M30_MAD.wrist <- irr::icc(ratings_M30_MAD.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_M10_MAD.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "M10_MAD.")]
+ratings_M10_MAD.wrist_long <- ratings_M10_MAD.wrist_long[ , colSums(is.na(ratings_M10_MAD.wrist_long))==0] #omit NA columns
+ICC.M10_MAD.wrist <- irr::icc(ratings_M10_MAD.wrist_long[,-1], model = "twoway", type = "consistency")
+ratings_L5_MAD.wrist_long <- ratings.wrist[,stringr::str_detect(names(ratings.wrist), "L5_MAD.")]
+ratings_L5_MAD.wrist_long <- ratings_L5_MAD.wrist_long[ , colSums(is.na(ratings_L5_MAD.wrist_long))==0] #omit NA columns
+ICC.L5_MAD.wrist <- irr::icc(ratings_L5_MAD.wrist_long[,-1], model = "twoway", type = "consistency")
 
 ## Step 6: Determine the number of days to reach reliability
 # Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
@@ -150,3 +282,101 @@ spearman.brown(singleICC = ICC.25ENMO.hip$value, desiredR = 0.7)
 # Wrist
 spearman.brown(singleICC = ICC.avgENMO.wrist$value, desiredR = 0.7)
 spearman.brown(singleICC = ICC.25ENMO.wrist$value, desiredR = 0.7)
+
+### My Little Moves app ###
+# Load app data
+data.app <- read.csv(paste0(filepath.app, filename.app))[, -1] # Load in app data, skip first row numbering
+
+#data.app <- load.app(filepath.app, filename.app, cohort = 3)
+
+## Step 1: Determine the length of one day of data
+# Number of participants at start
+paste0("number of participants: ", length(unique(data.app$castorID)))
+
+# Select files that provide => 8 hours on one day
+valid_data_8h1d <- preprocess.app(data.app, minhours = 8, mindays = 1, savedir = filepath.app) 
+paste0("participants provide > 8 h on one day: ", length(unique(valid_data_8h1d$castorID)))
+
+# Apply the 70/80 rule
+minimumtime <- apply.7080rule(filepath.app, method = "app")
+paste0("minimum time app: ", minimumtime, " min (", minimumtime/60, " h)")
+
+## Step 2: Preparing data for analyses - Process the data for files with 7 complete days
+valid_data_16h7d <- preprocess.app(data.app, minhours = 16, mindays = 7, savedir = filepath.app) 
+paste0("participants provide > 16 h on 7 day: ", length(unique(valid_data_16h7d$castorID)))
+
+# Step 3: Weekend day inclusion?
+library(dplyr)
+PA <- c()
+SB <- c()
+weekday <- c()
+for(row in 1:nrow(valid_data_16h7d)){
+  PA <- c(PA, sum(valid_data_16h7d$active[row], valid_data_16h7d$active_screen[row], na.rm = TRUE))
+  SB <- c(SB, sum(valid_data_16h7d$sedentary[row], valid_data_16h7d$sedentary_screen[row], na.rm = TRUE))
+  if(valid_data_16h7d$weekdag[row] == "zaterdag" || valid_data_16h7d$weekdag[row] == "zondag"){
+    weekday <- c(weekday, 0)
+  } else{ weekday <- c(weekday, 1) }
+}
+
+valid_data_16h7d$PA <- PA
+valid_data_16h7d$SB <- SB
+valid_data_16h7d$weekday <- weekday
+
+# TO DO: Descriptives
+
+res_PA <- wilcox.test(PA ~ weekday, data = valid_data_16h7d, paired = FALSE)
+z_PA <- qnorm(res_PA$p.value/2)
+
+res_SB <- wilcox.test(SB ~ weekday, data = valid_data_16h7d, paired = FALSE)
+z_SB <- qnorm(res_SB$p.value/2)
+
+res_sleep <- wilcox.test(sleep ~ weekday, data = valid_data_16h7d, paired = FALSE)
+z_sleep <- qnorm(res_sleep$p.value/2)
+
+
+## Step 4: Day-to-day variability
+day_day_PA <- friedman.test(y = valid_data_16h7d$PA, groups = valid_data_16h7d$weekdag, blocks = valid_data_16h7d$castorID)
+day_day_SB <- friedman.test(y = valid_data_16h7d$SB, groups = valid_data_16h7d$weekdag, blocks = valid_data_16h7d$castorID)
+day_day_sleep <- friedman.test(y = valid_data_16h7d$sleep, groups = valid_data_16h7d$weekdag, blocks = valid_data_16h7d$castorID)
+
+# No differences
+
+## Step 5: Determine single day intra-class correlations
+# Run intra-class correlations (ICC). Random consistency models, using single measure, ICC(2,1). Single measure is ICC for single day.
+ratings_PA_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$weekdag, valid_data_16h7d$PA))
+names(ratings_PA_long) <- c("id", "days", "PA")
+ratings_PA_long$PA <- as.numeric(ratings_PA_long$PA)
+ratings_PA_long$days <- as.factor(ratings_PA_long$days)
+ratings_PA_long$id <- as.factor(ratings_PA_long$id)
+ratings_PA  <- reshape(ratings_PA_long, idvar = "id", timevar = "days", direction = "wide")
+
+ratings_SB_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$weekdag, valid_data_16h7d$SB))
+names(ratings_SB_long) <- c("id", "days", "SB")
+ratings_SB_long$SB <- as.numeric(ratings_SB_long$SB)
+ratings_SB_long$days <- as.factor(ratings_SB_long$days)
+ratings_SB_long$id <- as.factor(ratings_SB_long$id)
+ratings_SB  <- reshape(ratings_SB_long, idvar = "id", timevar = "days", direction = "wide")
+
+ratings_sleep_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$weekdag, valid_data_16h7d$sleep))
+names(ratings_sleep_long) <- c("id", "days", "sleep")
+ratings_sleep_long$sleep <- as.numeric(ratings_sleep_long$sleep)
+ratings_sleep_long$days <- as.factor(ratings_sleep_long$days)
+ratings_sleep_long$id <- as.factor(ratings_sleep_long$id)
+ratings_sleep  <- reshape(ratings_sleep_long, idvar = "id", timevar = "days", direction = "wide")
+
+ICC.PA <- irr::icc(ratings_PA[,-1], model = "twoway", type = "consistency")
+ICC.SB <- irr::icc(ratings_SB[,-1], model = "twoway", type = "consistency")
+ICC.sleep <- irr::icc(ratings_sleep[,-1], model = "twoway", type = "consistency")
+
+# ICC.PA <- irr::icc(ratings_PA[,-1], model = "twoway", type = "agreement")
+# ICC.SB <- irr::icc(ratings_SB[,-1], model = "twoway", type = "agreement")
+# ICC.sleep <- irr::icc(ratings_sleep[,-1], model = "twoway", type = "agreement")
+
+
+## Step 6: Determine the number of days to reach reliability
+# Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
+spearman.brown(singleICC = ICC.PA$value, desiredR = 0.7)
+spearman.brown(singleICC = ICC.SB$value, desiredR = 0.7)
+spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.7)
+
+
