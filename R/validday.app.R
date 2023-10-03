@@ -17,8 +17,9 @@ validday.app <- function(data, minhours = 8, mindays = 7, savedir){
       tmp <- data[data$castorID == participants[[pp]],]
       tmp_valid <- data.frame()
       for(day in 1:nrow(tmp)){
-        if(sum(tmp[day,18:22], na.rm = TRUE) >= minhours * 60){
-          tmp_valid <- rbind(tmp_valid, tmp[day,])
+        tmp.day <- tmp[day,]
+        if(sum(tmp.day$PA,tmp.day$SB,tmp.day$sleep, na.rm = TRUE) >= minhours * 60){
+          tmp_valid <- rbind(tmp_valid, tmp.day)
         }
       }
       if(nrow(tmp_valid) >= mindays){
