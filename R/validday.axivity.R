@@ -10,24 +10,14 @@
 
 #' @export
 
-validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 7, savedir, castordata){
+validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 7, savedir, castordata, analysis = ""){
   filelist <- list.files(epochdir, pattern = ".RData")
   for(file in 1:length(filelist)){
     cat(file)
     load(paste(epochdir, filelist[file], sep = "/")) # Load .RData file
     
     data_day <- split(epochdata$agg.epoch, as.Date(epochdata$agg.epoch$timestampPOSIX)) # Split data per day
-    # Select the data from measurement period 1
-    pp_id <- strsplit(filelist[file], "_")[[1]][1]
-    startdate <- castordata$Date_measurement_period_1[which(castordata$Participant.Id == pp_id)]
-    period <- as.Date(startdate, format="%d-%m-%Y") + 1:7
-   
-    index_days <- c()
-    for (day in 1:length(period)) {
-       index_days <- c(index_days, which(names(data_day) == period[day]))
-     }
-     data_day <- data_day[index_days] # Select only days within measurement period
-
+    
     if(length(data_day) > 1){
       valid_days <- c()
       for (day in 1:length(data_day)) {
@@ -38,8 +28,20 @@ validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 
       data_day[which(valid_days == FALSE)] <- NULL # Remove the invalid days
     }
     if(length(data_day) >= mindays){
+      if(analysis == "reliability" & length(data_day) > 7){
+          # Select the data from measurement period 1
+          pp_id <- strsplit(filelist[file], "_")[[1]][1]
+          startdate <- castordata$Date_measurement_period_1[which(castordata$Participant.Id == pp_id)]
+          period <- as.Date(startdate, format="%d-%m-%Y") + 1:7
+
+          index_days <- c()
+          for (day in 1:length(period)) {
+             index_days <- c(index_days, which(names(data_day) == period[day]))
+           }
+           data_day <- data_day[index_days] # Select only days within measurement period
+    }
     valid_days <- list(data_day = data_day, metrics_day = epochdata$day.metrics)
     save(valid_days, file = paste(savedir, filelist[file], sep = "/")) # Save data that meets the valid day criterion
-    } 
+  }
   }
 }
