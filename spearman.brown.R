@@ -10,4 +10,4 @@
 
 spearman.brown <- function(singleICC, desiredR){
   return((desiredR*(1 - singleICC)/(singleICC*(1 - desiredR))))
-}x
+}

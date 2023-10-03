@@ -23,7 +23,7 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
     overwrite = FALSE, #FALSE = do not overwrite data if milestone data already exists -> N.B. if includedaycrit changes, data needs to be overwritten?
     do.parallel = FALSE,
     mode = c(1,2), 
-    do.report = FALSE,
+    do.report = TRUE,
     
     #study protocol
     strategy = 1, #analyze all available data

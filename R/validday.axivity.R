@@ -16,9 +16,9 @@ validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 
     cat(file)
     load(paste(epochdir, filelist[file], sep = "/")) # Load .RData file
     
-    data_day <- split(epochdata, as.Date(epochdata$timestampPOSIX)) # Split data per day
+    data_day <- split(epochdata$agg.epoch, as.Date(epochdata$agg.epoch$timestampPOSIX)) # Split data per day
     # Select the data from measurement period 1
-    pp_id <- strsplit(filelist[file], "_")[[1]][1]
+    #pp_id <- strsplit(filelist[file], "_")[[1]][1]
     #startdate <- castordata$Date_measurement_period_1[which(castordata$Participant.Id == pp_id)]
     #period <- as.Date(startdate, format="%d-%m-%Y") + 1:7
    
@@ -38,7 +38,8 @@ validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 
       data_day[which(valid_days == FALSE)] <- NULL # Remove the invalid days
     }
     if(length(data_day) >= mindays){
-    save(data_day, file = paste(savedir, filelist[file], sep = "/")) # Save data that meets the valid day criterion
+    valid_days <- list(data_day = data_day, metrics_day = epochdata$day.metrics)
+    save(valid_days, file = paste(savedir, filelist[file], sep = "/")) # Save data that meets the valid day criterion
     } 
   }
 }
