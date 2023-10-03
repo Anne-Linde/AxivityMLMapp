@@ -4,7 +4,7 @@
 
 #' @param filepath A string that contains the path to the app data
 #' @param filename A string that contains the name of the Excel app data file
-#' @param cohort Integer indicating the cohort for the data selection. One of c(1, 2, 3)
+#' @param cohort Vector indicating the cohort for the data selection. c(1, 2, 3)
 #' @param measurementperiod Integer indicating the measurement period for the data selection. One of c(1, 2, 3)
 
 #' @return DESCRIPTION HERE
@@ -12,10 +12,14 @@
 #' @export
 
 load.app <- function(filepath, filename, cohort, measurementperiod) {
-  data.app <- read.csv(paste0(filepath, filename))[, -1] # Load in app data, skip first row numbering
-  data.app <- data.app[data.app$cohort == cohort, ] #Select data for cohort
+  data.app <- read.csv(paste0(filepath, filename), sep = ";")[, -1] # Load in app data, skip first row numbering
   data.app <- data.app[data.app$measurement == measurementperiod, ] #Select data for measurement period
-  index <- which(is.na(data.app$castorID))
-  data.app <- data.app[-index,] # Remove empty rows
-  return(data.app)
+  tmp.data <- data.frame()
+  for(coh in 1:length(cohort)){
+    tmp <- data.app[data.app$cohort == cohort[coh], ] #Select data for cohort
+    tmp.data <- rbind(tmp.data, tmp)
+  }
+  index <- which(is.na(tmp.data$castorID))
+  tmp.data <- tmp.data[-index,] # Remove empty rows
+  return(tmp.data)
 }
