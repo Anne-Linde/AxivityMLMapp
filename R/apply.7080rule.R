@@ -17,8 +17,8 @@ apply.7080rule <- function(datadir, method, epochlength = 5, filename.app = "val
     for(file in 1:length(filelist)){
       load(paste(datadir, filelist[file], sep = "/")) # Load .RData file
       weartimepp <- c()
-      for (day in 1:length(data_day)){
-        nepochs <- nrow(data_day[[day]])
+      for (day in 1:length(valid_days$data_day)){
+        nepochs <- nrow(valid_days$data_day[[day]])
         epochsmin = 60/epochlength # Number of epochs in one minute
         weartimepp <- c(weartimepp, nepochs/epochsmin) # Calculate the minutes of wear time for each day
       }
