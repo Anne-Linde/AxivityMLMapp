@@ -18,15 +18,15 @@ validday.axivity <- function(epochdir, epochlength = 5, minhours = 8, mindays = 
     
     data_day <- split(epochdata$agg.epoch, as.Date(epochdata$agg.epoch$timestampPOSIX)) # Split data per day
     # Select the data from measurement period 1
-    #pp_id <- strsplit(filelist[file], "_")[[1]][1]
-    #startdate <- castordata$Date_measurement_period_1[which(castordata$Participant.Id == pp_id)]
-    #period <- as.Date(startdate, format="%d-%m-%Y") + 1:7
+    pp_id <- strsplit(filelist[file], "_")[[1]][1]
+    startdate <- castordata$Date_measurement_period_1[which(castordata$Participant.Id == pp_id)]
+    period <- as.Date(startdate, format="%d-%m-%Y") + 1:7
    
-    # index_days <- c()
-    # for (day in 1:length(period)) {
-    #   index_days <- c(index_days, which(names(data_day) == period[day]))
-    # }
-    # data_day <- data_day[index_days] # Select only days within measurement period
+    index_days <- c()
+    for (day in 1:length(period)) {
+       index_days <- c(index_days, which(names(data_day) == period[day]))
+     }
+     data_day <- data_day[index_days] # Select only days within measurement period
 
     if(length(data_day) > 1){
       valid_days <- c()
