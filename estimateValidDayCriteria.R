@@ -224,7 +224,7 @@ ICC.L5_MAD.hip <- irr::icc(ratings_L5_MAD.hip_long[,-1], model = "twoway", type 
 
 # Wrist
 ratings.wrist  <- reshape(axivity.estimates.wrist, idvar = "days", timevar = "id", direction = "wide")
-
+#TO DO change ratings for all metrics similar to 228t/m232
 ratings_ENMO.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$ENMO))
 names(ratings_ENMO.wrist_long) <- c("id", "days", "ENMO")
 ratings_ENMO.wrist_long$ENMO <- as.numeric(ratings_ENMO.wrist_long$ENMO)
@@ -308,3 +308,78 @@ spearman.brown(singleICC = ICC.M60_MAD.wrist$value, desiredR = 0.7)
 spearman.brown(singleICC = ICC.M30_MAD.wrist$value, desiredR = 0.7)
 spearman.brown(singleICC = ICC.M10_MAD.wrist$value, desiredR = 0.7)
 spearman.brown(singleICC = ICC.L5_MAD.wrist$value, desiredR = 0.7)
+
+
+### My Little Moves app ###
+# Load app data for all cohorts
+data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementperiod = 1)
+
+## Step 1: Determine the length of one day of data
+# Number of participants at start
+paste0("number of participants: ", length(unique(data.app$castorID)))
+
+# Select files that provide => 8 hours on one day
+valid_data_8h1d <- validday.app(data.app, minhours = 8, mindays = 1, savedir = filepath.app) 
+paste0("participants provide > 8 h on one day: ", length(unique(valid_data_8h1d$castorID)))
+
+# Apply the 70/80 rule
+minimumtime <- apply.7080rule(method = "app", data.app = valid_data_8h1d)
+paste0("minimum time app: ", minimumtime, " min (", minimumtime/60, " h)")
+
+## Step 2: Preparing data for analyses - Process the data for files with 7 complete days
+valid_data_16h7d <- validday.app(data.app, minhours = 16, mindays = 7, savedir = filepath.app) 
+paste0("participants provide > 16 h on 7 day: ", length(unique(valid_data_16h7d$castorID)))
+
+## Step 3: Weekend day inclusion?
+# Descriptives
+desc.weekend.app <- group_by(valid_data_16h7d, weekenddag) %>% 
+  summarise_at(c("PA", "SB", "sleep"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+View(desc.weekend.app[c(2,4,7,9),])
+
+res_PA <- wilcox.test(PA ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
+z_PA <- qnorm(res_PA$p.value/2)
+res_SB <- wilcox.test(SB ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
+z_SB <- qnorm(res_SB$p.value/2)
+res_sleep <- wilcox.test(sleep ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
+z_sleep <- qnorm(res_sleep$p.value/2)
+
+## Step 4: Day-to-day variability
+day_day_PA <- friedman.test(y = valid_data_16h7d$PA, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
+day_day_SB <- friedman.test(y = valid_data_16h7d$SB, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
+day_day_sleep <- friedman.test(y = valid_data_16h7d$sleep, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
+
+# No differences
+
+## Step 5: Determine single day intra-class correlations
+# Run intra-class correlations (ICC). Random consistency models, using single measure, ICC(2,1). Single measure is ICC for single day.
+ratings_PA_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$PA))
+names(ratings_PA_long) <- c("id", "days", "PA")
+ratings_PA_long$PA <- as.numeric(ratings_PA_long$PA)
+ratings_PA_long$days <- as.factor(ratings_PA_long$days)
+ratings_PA_long$id <- as.factor(ratings_PA_long$id)
+ratings_PA  <- reshape(ratings_PA_long, idvar = "id", timevar = "days", direction = "wide")
+
+ratings_SB_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$SB))
+names(ratings_SB_long) <- c("id", "days", "SB")
+ratings_SB_long$SB <- as.numeric(ratings_SB_long$SB)
+ratings_SB_long$days <- as.factor(ratings_SB_long$days)
+ratings_SB_long$id <- as.factor(ratings_SB_long$id)
+ratings_SB  <- reshape(ratings_SB_long, idvar = "id", timevar = "days", direction = "wide")
+
+ratings_sleep_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$sleep))
+names(ratings_sleep_long) <- c("id", "days", "sleep")
+ratings_sleep_long$sleep <- as.numeric(ratings_sleep_long$sleep)
+ratings_sleep_long$days <- as.factor(ratings_sleep_long$days)
+ratings_sleep_long$id <- as.factor(ratings_sleep_long$id)
+ratings_sleep  <- reshape(ratings_sleep_long, idvar = "id", timevar = "days", direction = "wide")
+
+ICC.PA <- irr::icc(ratings_PA[,-1], model = "twoway", type = "consistency")
+ICC.SB <- irr::icc(ratings_SB[,-1], model = "twoway", type = "consistency")
+ICC.sleep <- irr::icc(ratings_sleep[,-1], model = "twoway", type = "consistency")
+
+## Step 6: Determine the number of days to reach reliability
+# Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
+spearman.brown(singleICC = ICC.PA$value, desiredR = 0.7)
+spearman.brown(singleICC = ICC.SB$value, desiredR = 0.7)
+spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.7)
