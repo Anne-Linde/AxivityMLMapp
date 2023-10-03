@@ -22,12 +22,11 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
     outputdir = outputdir,
     overwrite = FALSE, #FALSE = do not overwrite data if milestone data already exists -> N.B. if includedaycrit changes, data needs to be overwritten?
     do.parallel = FALSE,
-    mode = c(1, 2), 
-    do.report = FALSE,
+    mode = c(1,2), 
+    do.report = c(2),
+    
     #study protocol
     strategy = 1, #analyze all available data
-    #strategy = 3, ndayswindow = 8, #days of data collection record higher activity than the other days
-    
     dayborder = 0, #consider data per day from midnight to midnight, equal to the app
     # part 1 raw data processing
     do.roll_med_acc_x = TRUE,
@@ -46,7 +45,7 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
     #nonwear_approach = "2023",
     qwindow=c(0,24), 
     iglevels=TRUE, # Calculate intensity gradient
-    qlevels = c(c(1380/1440),c(1410/1440),c(1430/1440)), # Minimum acceleration value for the most active 60, 30 and 10 minutes
+    qlevels = c(c(1380/1440),c(1410/1440),c(1430/1440)), # Minimum acceleration value for the most active 60, 30 and 10 minutes (M60, M30, M10)
     do.imp = FALSE #skips automatic imputation of missing values
   )
   
