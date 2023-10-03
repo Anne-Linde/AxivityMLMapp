@@ -8,7 +8,7 @@
 
 #' @export
 
-apply.7080rule <- function(datadir, method, epochlength = 5, filename.app = "valid_data_8h1d.RData"){
+apply.7080rule <- function(datadir, method, epochlength = 5, data.app){
   
   weartime <- c()
 
@@ -26,15 +26,15 @@ apply.7080rule <- function(datadir, method, epochlength = 5, filename.app = "val
     }
   }
   if(method == "app"){
-    data.app <- load(paste(datadir, filename.app, sep = "/"))
-    participants <- unique(valid_data$castorID)
+    
+    participants <- unique(data.app$castorID)
     weartimepp <- c()
   
     for(pp in 1:length(participants)){
       if(!is.na(participants[[pp]])){
-        tmp <- valid_data[valid_data$castorID == participants[[pp]],]
+        tmp <- data.app[data.app$castorID == participants[[pp]],]
         for(day in 1:nrow(tmp)){
-          weartimepp <- c(weartimepp, sum(tmp[day,18:22], na.rm = TRUE))
+          weartimepp <- c(weartimepp, sum(tmp[day,]$PA, tmp[day,]$SB, tmp[day,]$sleep, na.rm = TRUE))
         }
         weartime <- c(weartime, mean(weartimepp))
       }
