@@ -312,7 +312,7 @@ spearman.brown(singleICC = ICC.L5_MAD.wrist$value, desiredR = 0.7)
 
 ### My Little Moves app ###
 # Load app data for all cohorts
-data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementperiod = 1)
+data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementperiod = 1, sep = ";")
 
 ## Step 1: Determine the length of one day of data
 # Number of participants at start
@@ -332,6 +332,7 @@ paste0("participants provide > 16 h on 7 day: ", length(unique(valid_data_16h7d$
 
 ## Step 3: Weekend day inclusion?
 # Descriptives
+library(dplyr)
 desc.weekend.app <- group_by(valid_data_16h7d, weekenddag) %>% 
   summarise_at(c("PA", "SB", "sleep"),
                list(median = median, IQR = quantile), na.rm = TRUE)
@@ -383,3 +384,9 @@ ICC.sleep <- irr::icc(ratings_sleep[,-1], model = "twoway", type = "consistency"
 spearman.brown(singleICC = ICC.PA$value, desiredR = 0.7)
 spearman.brown(singleICC = ICC.SB$value, desiredR = 0.7)
 spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.7)
+spearman.brown(singleICC = ICC.PA$value, desiredR = 0.75)
+spearman.brown(singleICC = ICC.SB$value, desiredR = 0.75)
+spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.75)
+spearman.brown(singleICC = ICC.PA$value, desiredR = 0.8)
+spearman.brown(singleICC = ICC.SB$value, desiredR = 0.8)
+spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.8)
