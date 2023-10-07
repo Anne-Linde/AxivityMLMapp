@@ -1,0 +1,80 @@
+---
+title: "Normality check"
+author: "Annelinde Lettink"
+date: "10/6/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918/"
+filename.app <- "20230918_activities_castor_linked_duration.csv"
+filename.app.day <- "/20230918_MLMapp_pp_duration_frequency_day.csv"
+
+
+# source functions directly from file, to be replaced by package installation:
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
+
+## Load data
+data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementperiod = 1, sep = ",") # Load app data
+data.app.3 <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data
+#data.app.day <- read.csv(paste0(filepath.app, filename.app.day))[-1] # Load app data
+```
+
+## My Little Moves app data
+
+This section shows the histograms for the app data categories (duration and frequency) and for the 24-hour movement behavior categories.
+
+# For sub-cohort 3
+
+```{r PLot app data categories cohort 3}
+plotlist <- list()
+
+for (category in 1:length(unique(data.app.3$activity))){
+  hist <- hist(data.app.3[which(data.app.3$activity == unique(data.app.3$activity)[category]),]$total_duration, 
+               xlab = "Duration (min)",
+               main = unique(data.app.3$activity)[category])
+  plotlist[[category]]  <- hist
+}
+```
+```{r PLot app data 24-hour behavior labels cohort 3}
+plotlist <- list()
+
+for (behavior in 1:length(unique(data.app.3$behavior))){
+  if(!is.na(data.app.3$behavior[behavior])){
+     hist <- hist(data.app.3[which(data.app.3$behavior == unique(data.app.3$behavior)[behavior]),]$total_duration, 
+               xlab = "Duration (min)",
+               main = unique(data.app.3$behavior)[behavior])
+  plotlist[[behavior]]  <- hist
+  }
+}
+```
+
+# For all cohorts
+
+```{r PLot app data categories}
+plotlist <- list()
+plotlist2 <- list()
+
+for (category in 1:length(unique(data.app$activity))){
+  hist <- hist(data.app[which(data.app$activity == unique(data.app$activity)[category]),]$total_duration, 
+               xlab = "Duration (min)",
+               main = unique(data.app$activity)[category])
+  plotlist[[category]]  <- hist
+}
+```
+```{r PLot app data 24-hour behavior labels}
+plotlist <- list()
+
+for (behavior in 1:length(unique(data.app$behavior))){
+  if(!is.na(data.app$behavior[behavior])){
+     hist <- hist(data.app[which(data.app$behavior == unique(data.app$behavior)[behavior]),]$total_duration, 
+               xlab = "Duration (min)",
+               main = unique(data.app$behavior)[behavior])
+  plotlist[[behavior]]  <- hist
+  }
+}
+```
+v
