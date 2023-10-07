@@ -6,6 +6,10 @@ datadir.app <- paste0("/Users/annelindelettink/Documents/Work MacBook Pro Anneli
 datadir.castor <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Castor export/20231005/Study" 
 filename.castor <- "My_Little_Moves_export_20231005.csv"
 
+# source functions directly from file, to be replaced by package installation:
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
+
 ### Structure MLM app data in the following steps:
 ## 1) .json file of the app data, milestoned into .csv files: each row represents an acitivity entry and the follow-up questions
 ## 2) Link the Castor ID to the MLM app data using the unique research codes
@@ -18,6 +22,7 @@ unnest.json(datadir.app, date)
 ## Link Castor ID to the MLM app data
 link.app.castor(datadir.app, datadir.castor, filename.castor, date)
 
+## Restructure data per participant per day
 categorize.structure.activities(datadir.app, date)
   
 

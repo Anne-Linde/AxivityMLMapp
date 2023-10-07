@@ -88,12 +88,9 @@ categorize.structure.activities <- function(datadir, date){
   
   # List data per measurement period
   list_data <- list()
-  list_milestones <- list()
   for(measurement in 1:length(unique(data$measurement))){
     tmp <- data[data$measurement == unique(data$measurement)[measurement], ]
     list_data[[measurement]] <- tmp
-    tmp2 <- milestones[milestones$measurement == unique(milestones$measurement)[measurement], ]
-    list_milestones[[measurement]] <- tmp2
   }
   
   ## From long activity entry format to wide day format
@@ -119,7 +116,6 @@ categorize.structure.activities <- function(datadir, date){
     data <- list_data[[measurement]]
     for(pp in 1:length(unique(data$castorID))){ # For each participant
       tmp <- data[data$castorID == data$castorID[pp], ] # Select activity entries
-      intake <- milestone[milestone$castorID == data$castorID[pp], ] # Select motor milestone data
       #days <- unique(tmp$date)
       if(length(unique(tmp$date)) > 0){ # If there is at least one day for this participant
         for(day in 1:length(unique(tmp$date))){ # For each day
