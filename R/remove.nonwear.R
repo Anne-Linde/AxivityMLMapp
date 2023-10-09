@@ -47,8 +47,9 @@ remove.nonwear <- function(epochdir.hip, epochdir.wrist, savefolder, data.castor
       } else {
         endDate <- as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%M-%Y") + 6
       } 
-      if(unique(as.Date(epochdata$agg.epoch$timestampPOSIX)) > endDate) {
-        heuristic_nw <- c(heuristic_nw, which(as.Date(epochdata$agg.epoch$timestampPOSIX) > endDate))
+      if(sum(unique(as.Date(epochdata$agg.epoch$timestampPOSIX)) > endDate) > 1) {
+        index <- which(as.Date(epochdata$agg.epoch$timestampPOSIX) > endDate)
+        heuristic_nw <- c(heuristic_nw, index)
       }
       if(length(heuristic_nw) > 1){ # Remove non-wear data
         epochdata$agg.epoch <- epochdata$agg.epoch[-heuristic_nw,] 
