@@ -27,8 +27,4 @@ load.structure.axivity(filepath = paste0(filepath.axivity, "/wave1"), outputdir 
 load.structure.axivity(filepath = paste0(filepath.axivity, "/wave2"), outputdir = outputdir, processeddir = paste0(outputdir, "/output_wave2")) 
 
 ### Remove data detected as non-wear from the 5-sec epoch data
-
 remove.nonwear(epochdir.hip, epochdir.wrist, savefolder, data.castor)
-  
-# TO DO:
-# - Check files for non-wear removal, using heuristics: accelerometer attachment and comments

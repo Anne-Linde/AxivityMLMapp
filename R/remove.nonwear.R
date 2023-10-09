@@ -34,20 +34,20 @@ remove.nonwear <- function(epochdir.hip, epochdir.wrist, savefolder, data.castor
     if(nrow(epochdata$agg.epoch) > 0){
       pp <- strsplit(filelist[file], "_")[[1]][1]
       pp_characteristics <- data.castor[which(data.castor$Participant.Id == pp),]
-      attachment_axivity <- pp_characteristics$Time_Acc_start_1 
+      attachment_axivity <- as.Date(pp_characteristics$Time_Acc_start_1, format = "%d-%m-%Y")
       heuristic_nw <- which(epochdata$agg.epoch$timestampPOSIX < strptime(attachment_axivity, format = "%d-%m-%Y %H:%M"))
       
       # Remove data after wear protocol was finished (i.e. 8 days wear time)
       if(pp_characteristics$Date_measurement_period_1 == ""){
         # App was not filled in, use attachment day + 7 days for measurement protocol
-        endDate <- as.Date(attachment_axivity, format = "%d-%M-%Y") + 7
-      } else if(as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%M-%Y") == as.Date(attachment_axivity, format = "%d-%M-%Y")){
+        endDate <- as.Date(attachment_axivity, format = "%d-%m-%Y") + 7
+      } else if(as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%m-%Y") == attachment_axivity){
         # If app was activated at attachment date
-        endDate <- as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%M-%Y") + 7
+        endDate <- as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%m-%Y") + 7
       } else {
-        endDate <- as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%M-%Y") + 6
+        endDate <- as.Date(pp_characteristics$Date_measurement_period_1, format = "%d-%m-%Y") + 6
       } 
-      if(sum(unique(as.Date(epochdata$agg.epoch$timestampPOSIX)) > endDate) > 1) {
+      if(sum(unique(as.Date(epochdata$agg.epoch$timestampPOSIX)) > endDate) > 0) {
         index <- which(as.Date(epochdata$agg.epoch$timestampPOSIX) > endDate)
         heuristic_nw <- c(heuristic_nw, index)
       }
