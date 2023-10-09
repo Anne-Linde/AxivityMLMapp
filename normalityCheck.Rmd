@@ -2,7 +2,9 @@
 title: "Normality check"
 author: "Annelinde Lettink"
 date: "10/6/2023"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -47,7 +49,7 @@ plotlist <- list()
 
 for (behavior in 1:length(unique(data.app.3$behavior))){
   if(!is.na(data.app.3$behavior[behavior])){
-     hist <- hist(data.app.3[which(data.app.3$behavior == unique(data.app.3$behavior)[behavior]),]$total_duration, 
+     hist <- hist(data.app.3$total_duration[which(data.app.3$behavior == unique(data.app.3$behavior[behavior]))],
                xlab = "Duration (min)",
                main = unique(data.app.3$behavior)[behavior])
   plotlist[[behavior]]  <- hist

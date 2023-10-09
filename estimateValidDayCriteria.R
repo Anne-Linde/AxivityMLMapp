@@ -1,7 +1,7 @@
 ## User settings
 # Directory path and name of castor export file
 filepath.castor <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Castor export"
-filename.castor <- "/20230918/Study/My_Little_Moves_export_20230918.csv"
+filename.castor <- "/20231007/Study/My_Little_Moves_export_20231007.csv"
 # Directory path and name of app data (frequency and duration per day)
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
 filename.app <- "/20230918_MLMapp_activiteit_gedrag_duur_per_dag.csv"
@@ -14,18 +14,16 @@ my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Anne
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 # TO DO: 
-# - check normality of continuous data using Shaphiro-Wilks test (accelerometry)
-# - check normality of app data
 # - split analyses from step 3 into age groups/milestone groups?
 
 # Load in Castor data (this file includes participant characteristics)
-data.castor <- load.castor(filepath.castor, filename.castor, cohort = 3)
+data.castor <- load.castor(filepath.castor, filename.castor, cohort = c(3))
 
 ### Axivity ###
 ## Step 1: Determine the length of one day of data
 # Number of accelerometer files at start
 filelist.hip <- list.files(epochdir.hip, pattern = ".RData")
-filelist.wrist <- list.files(epochdir.hip, pattern = ".RData")
+filelist.wrist <- list.files(epochdir.wrist, pattern = ".RData")
 paste0("accelerometer files hip: ", length(filelist.hip))
 paste0("accelerometer files wrist: ", length(filelist.wrist))
 
@@ -44,92 +42,179 @@ weartime.wrist <- apply.7080rule(savedir.wrist, method = "axivity")
 paste0("minimum required wear time wrist: ", weartime.wrist, " min (", weartime.wrist/60, " h)")
 
 ## Step 2: Preparing data for analyses - Process the data for files with 7 complete days
-savedir.hip <- paste0(epochdir.hip, "/7d16h")
-validday.axivity(epochdir = epochdir.hip, epochlength = 5, minhours = 16, mindays = 7, savedir = savedir.hip, data.castor, analysis = "reliability")
-paste0("hip: accelerometer files that provide 7 days of at least 16 h: ", length(list.files(savedir.hip, pattern = ".RData")))
-savedir.wrist <- paste0(epochdir.wrist, "/7d16h")
-validday.axivity(epochdir = epochdir.wrist, epochlength = 5, minhours = 16, mindays = 7, savedir = savedir.wrist, data.castor, analysis = "reliability") 
-paste0("wrist: accelerometer files that provide 7 days of at least 16 h: ", length(list.files(savedir.wrist, pattern = ".RData")))
+savedir.hip <- paste0(epochdir.hip, "/7d18h")
+validday.axivity(epochdir = epochdir.hip, epochlength = 5, minhours = 18, mindays = 7, savedir = savedir.hip, data.castor, analysis = "reliability")
+paste0("hip: accelerometer files that provide 7 days of at least 18 h: ", length(list.files(savedir.hip, pattern = ".RData")))
+savedir.wrist <- paste0(epochdir.wrist, "/7d18h")
+validday.axivity(epochdir = epochdir.wrist, epochlength = 5, minhours = 18, mindays = 7, savedir = savedir.wrist, data.castor, analysis = "reliability") 
+paste0("wrist: accelerometer files that provide 7 days of at least 18 h: ", length(list.files(savedir.wrist, pattern = ".RData")))
 
-# Generate the outcomes per accelerometer recording (per day)
+## Generate the outcomes per accelerometer recording (per day)
 axivity.estimates.hip <- estimates.axivity(savedir.hip) 
 axivity.estimates.wrist <- estimates.axivity(savedir.wrist)
+
+# Generate per milestone group (no crawl, crawl and walk) as it is expected that the accelerometers record different accelerations 
+milestones <- load.app(filepath.app, "/20230918_motormilestones_castor_linked.csv", cohort = c(3), measurementperiod = 1, sep = ",")
+pp <- unique(axivity.estimates.hip$id)
+crawl <- c()
+walk <- c()
+which(milestones$castorID %in% pp)
+for (subj in 1:length(pp)) {
+  tmp <- milestones[milestones$castorID==pp[subj],]
+  if(tmp$age.group == 5 || tmp$age.group== 4){
+    crawl <- c(crawl, 1)
+    walk <- c(walk, 1)
+  } else if(tmp$age.group == 1) {
+    walk <- c(walk, 0)
+    if(tmp$crawl == 1){
+      crawl <- c(crawl, 1)
+    } else {crawl <- c(crawl, 0)}  } 
+  else {
+    if(tmp$crawl == 1){
+      crawl <- c(crawl, 1)
+    } else {crawl <- c(crawl, 0)}
+    if(tmp$walk == 1){
+      walk <- c(walk, 1)
+    } else {walk <- c(walk, 0)}
+  }
+}
+tmp.hip <- as.data.frame(cbind(pp, crawl, walk))
+R.nocrawl.hip <- tmp.hip$pp[which(tmp.hip$crawl == 0 & tmp.hip$walk == 0)]
+R.crawl.hip <- tmp.hip$pp[which(tmp.hip$crawl == 1 & tmp.hip$walk == 0)]
+R.walk.hip <- tmp.hip$pp[which(tmp.hip$crawl == 1 & tmp.hip$walk == 0)]
+estimates.nocrawl.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.nocrawl.hip) 
+estimates.crawl.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.crawl.hip) 
+estimates.walk.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.walk.hip) 
+
+pp <- unique(axivity.estimates.wrist$id)
+crawl <- c()
+walk <- c()
+for (subj in 1:length(pp)) {
+  tmp <- milestones[milestones$castorID==pp[subj],]
+  if(tmp$age.group == 5 || tmp$age.group== 4){
+    crawl <- c(crawl, 1)
+    walk <- c(walk, 1)
+  } else if(tmp$age.group == 1) {
+    walk <- c(walk, 0)
+    if(tmp$crawl == 1){
+      crawl <- c(crawl, 1)
+    } else {crawl <- c(crawl, 0)}  } 
+  else {
+    if(tmp$crawl == 1){
+      crawl <- c(crawl, 1)
+    } else {crawl <- c(crawl, 0)}
+    if(tmp$walk == 1){
+      walk <- c(walk, 1)
+    } else {walk <- c(walk, 0)}
+  }
+}
+tmp.wrist <- as.data.frame(cbind(pp, crawl, walk))
+R.nocrawl.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 0 & tmp.wrist$walk == 0)]
+R.crawl.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 0)]
+R.walk.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 0)]
+estimates.nocrawl.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.nocrawl.wrist) 
+estimates.crawl.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.crawl.wrist) 
+estimates.walk.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.walk.wrist) 
+
 
 ## Step 3: Weekend day inclusion?
 library(dplyr)
 # Hip
+# desc.weekend.hip <- group_by(axivity.estimates.hip, weekday) %>% 
+#   summarise_at(c("ENMO", "ig_ENMO", "M60_ENMO", "M30_ENMO", "M10_ENMO", "L5_ENMO",
+#                  "MAD", "ig_MAD", "M60_MAD", "M30_MAD", "M10_MAD", "L5_MAD"),
+#                list(median = median, IQR = quantile), na.rm = TRUE)
 desc.weekend.hip <- group_by(axivity.estimates.hip, weekday) %>% 
-  summarise_at(c("ENMO", "ENMO_25", "ig_ENMO", "M60_ENMO", "M30_ENMO", "M10_ENMO", "L5_ENMO",
-                 "MAD", "MAD_25", "ig_MAD", "M60_MAD", "M30_MAD", "M10_MAD", "L5_MAD"),
+  summarise_at(c("ENMO", "ig_ENMO", 
+                 "MAD", "ig_MAD"),
                list(median = median, IQR = quantile), na.rm = TRUE)
 View(desc.weekend.hip[c(2,4,7,9),])
 
 res_ENMO.hip <- wilcox.test(ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
 z_ENMO.hip <- qnorm(res_ENMO.hip$p.value/2)
-res_ENMO_25.hip <- wilcox.test(ENMO_25 ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_ENMO_25.hip <- qnorm(res_ENMO_25.hip$p.value/2)
 res_ig_ENMO.hip <- wilcox.test(ig_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
 z_ig_ENMO.hip <- qnorm(res_ig_ENMO.hip$p.value/2)
-res_M60_ENMO.hip <- wilcox.test(M60_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_M60_ENMO.hip <- qnorm(res_M60_ENMO.hip$p.value/2)
-res_M30_ENMO.hip <- wilcox.test(M30_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_M30_ENMO.hip <- qnorm(res_M30_ENMO.hip$p.value/2)
-res_M10_ENMO.hip <- wilcox.test(M10_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_M10_ENMO.hip <- qnorm(res_M10_ENMO.hip$p.value/2)
-res_L5_ENMO.hip <- wilcox.test(L5_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_L5_ENMO.hip <- qnorm(res_L5_ENMO.hip$p.value/2)
+# res_M60_ENMO.hip <- wilcox.test(M60_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_M60_ENMO.hip <- qnorm(res_M60_ENMO.hip$p.value/2)
+# res_M30_ENMO.hip <- wilcox.test(M30_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_M30_ENMO.hip <- qnorm(res_M30_ENMO.hip$p.value/2)
+# res_M10_ENMO.hip <- wilcox.test(M10_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_M10_ENMO.hip <- qnorm(res_M10_ENMO.hip$p.value/2)
+# res_L5_ENMO.hip <- wilcox.test(L5_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_L5_ENMO.hip <- qnorm(res_L5_ENMO.hip$p.value/2)
 
 res_MAD.hip <- wilcox.test(MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
 z_MAD.hip <- qnorm(res_MAD.hip$p.value/2)
-res_MAD_25.hip <- wilcox.test(MAD_25 ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_MAD_25.hip <- qnorm(res_MAD_25.hip$p.value/2)
 res_ig_MAD.hip <- wilcox.test(ig_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
 z_ig_MAD.hip <- qnorm(res_ig_MAD.hip$p.value/2)
-res_M60_MAD.hip <- wilcox.test(M60_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_M60_MAD.hip <- qnorm(res_M60_MAD.hip$p.value/2)
-res_M30_MAD.hip <- wilcox.test(M30_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_M30_MAD.hip <- qnorm(res_M30_MAD.hip$p.value/2)
-res_M10_MAD.hip <- wilcox.test(M10_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_M10_MAD.hip <- qnorm(res_M10_MAD.hip$p.value/2)
-res_L5_MAD.hip <- wilcox.test(L5_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_L5_MAD.hip <- qnorm(res_L5_MAD.hip$p.value/2)
+
+# res_M60_MAD.hip <- wilcox.test(M60_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_M60_MAD.hip <- qnorm(res_M60_MAD.hip$p.value/2)
+# res_M30_MAD.hip <- wilcox.test(M30_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_M30_MAD.hip <- qnorm(res_M30_MAD.hip$p.value/2)
+# res_M10_MAD.hip <- wilcox.test(M10_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_M10_MAD.hip <- qnorm(res_M10_MAD.hip$p.value/2)
+# res_L5_MAD.hip <- wilcox.test(L5_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
+# z_L5_MAD.hip <- qnorm(res_L5_MAD.hip$p.value/2)
+
+# Separate for the three groups
+desc.weekend.hip.nocrawl <- group_by(estimates.nocrawl.hip, weekday) %>% 
+  summarise_at(c("ENMO", "ig_ENMO", 
+                 "MAD", "ig_MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+View(desc.weekend.hip.nocrawl[c(2,4,7,9),])
+
+res_MAD.hip.nocrawl <- wilcox.test(MAD ~ weekday, data = estimates.nocrawl.hip, paired = FALSE)
+z_MAD.hip.nocrawl <- qnorm(res_MAD.hip.nocrawl$p.value/2)
+res_ig_MAD.hip.nocrawl <- wilcox.test(ig_MAD ~ weekday, data = estimates.nocrawl.hip, paired = FALSE)
+z_ig_MAD.hip.nocrawl <- qnorm(res_ig_MAD.hip.nocrawl$p.value/2)
+
+res_MAD.hip.crawl <- wilcox.test(MAD ~ weekday, data = estimates.crawl.hip, paired = FALSE)
+z_MAD.hip.crawl <- qnorm(res_MAD.hip.crawl$p.value/2)
+res_ig_MAD.hip.crawl <- wilcox.test(ig_MAD ~ weekday, data = estimates.crawl.hip, paired = FALSE)
+z_ig_MAD.hip.crawl <- qnorm(res_ig_MAD.hip.crawl$p.value/2)
+
+res_MAD.hip.walk <- wilcox.test(MAD ~ weekday, data = estimates.walk.hip, paired = FALSE)
+z_MAD.hip.walk <- qnorm(res_MAD.hip.walk$p.value/2)
+res_ig_MAD.hip.walk <- wilcox.test(ig_MAD ~ weekday, data = estimates.walk.hip, paired = FALSE)
+z_ig_MAD.hip.walk <- qnorm(res_ig_MAD.hip.walk$p.value/2)
 
 # Wrist
+# desc.weekend.wrist <- group_by(axivity.estimates.wrist, weekday) %>% 
+#   summarise_at(c("ENMO", "ENMO_25", "ig_ENMO", "M60_ENMO", "M30_ENMO", "M10_ENMO", "L5_ENMO",
+#                  "MAD", "MAD_25", "ig_MAD", "M60_MAD", "M30_MAD", "M10_MAD", "L5_MAD"),
+#                list(median = median, IQR = quantile), na.rm = TRUE)
 desc.weekend.wrist <- group_by(axivity.estimates.wrist, weekday) %>% 
-  summarise_at(c("ENMO", "ENMO_25", "ig_ENMO", "M60_ENMO", "M30_ENMO", "M10_ENMO", "L5_ENMO",
-                 "MAD", "MAD_25", "ig_MAD", "M60_MAD", "M30_MAD", "M10_MAD", "L5_MAD"),
+  summarise_at(c("ENMO", "ig_ENMO", 
+                 "MAD", "ig_MAD"),
                list(median = median, IQR = quantile), na.rm = TRUE)
 View(desc.weekend.wrist[c(2,4,7,9),])
 
 res_ENMO.wrist <- wilcox.test(ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
 z_ENMO.wrist <- qnorm(res_ENMO.wrist$p.value/2)
-res_ENMO_25.wrist <- wilcox.test(ENMO_25 ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_ENMO_25.wrist <- qnorm(res_ENMO_25.wrist$p.value/2)
 res_ig_ENMO.wrist <- wilcox.test(ig_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
 z_ig_ENMO.wrist <- qnorm(res_ig_ENMO.wrist$p.value/2)
-res_M60_ENMO.wrist <- wilcox.test(M60_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_M60_ENMO.wrist <- qnorm(res_M60_ENMO.wrist$p.value/2)
-res_M30_ENMO.wrist <- wilcox.test(M30_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_M30_ENMO.wrist <- qnorm(res_M30_ENMO.wrist$p.value/2)
-res_M10_ENMO.wrist <- wilcox.test(M10_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_M10_ENMO.wrist <- qnorm(res_M10_ENMO.wrist$p.value/2)
-res_L5_ENMO.wrist <- wilcox.test(L5_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_L5_ENMO.wrist <- qnorm(res_L5_ENMO.wrist$p.value/2)
+# res_M60_ENMO.wrist <- wilcox.test(M60_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_M60_ENMO.wrist <- qnorm(res_M60_ENMO.wrist$p.value/2)
+# res_M30_ENMO.wrist <- wilcox.test(M30_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_M30_ENMO.wrist <- qnorm(res_M30_ENMO.wrist$p.value/2)
+# res_M10_ENMO.wrist <- wilcox.test(M10_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_M10_ENMO.wrist <- qnorm(res_M10_ENMO.wrist$p.value/2)
+# res_L5_ENMO.wrist <- wilcox.test(L5_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_L5_ENMO.wrist <- qnorm(res_L5_ENMO.wrist$p.value/2)
 
 res_MAD.wrist <- wilcox.test(MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
 z_MAD.wrist <- qnorm(res_MAD.wrist$p.value/2)
-res_MAD_25.wrist <- wilcox.test(MAD_25 ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_MAD_25.wrist <- qnorm(res_MAD_25.wrist$p.value/2)
 res_ig_MAD.wrist <- wilcox.test(ig_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
 z_ig_MAD.wrist <- qnorm(res_ig_MAD.wrist$p.value/2)
-res_M60_MAD.wrist <- wilcox.test(M60_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_M60_MAD.wrist <- qnorm(res_M60_MAD.wrist$p.value/2)
-res_M30_MAD.wrist <- wilcox.test(M30_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_M30_MAD.wrist <- qnorm(res_M30_MAD.wrist$p.value/2)
-res_M10_MAD.wrist <- wilcox.test(M10_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_M10_MAD.wrist <- qnorm(res_M10_MAD.wrist$p.value/2)
-res_L5_MAD.wrist <- wilcox.test(L5_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_L5_MAD.wrist <- qnorm(res_L5_MAD.wrist$p.value/2)
+# res_M60_MAD.wrist <- wilcox.test(M60_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_M60_MAD.wrist <- qnorm(res_M60_MAD.wrist$p.value/2)
+# res_M30_MAD.wrist <- wilcox.test(M30_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_M30_MAD.wrist <- qnorm(res_M30_MAD.wrist$p.value/2)
+# res_M10_MAD.wrist <- wilcox.test(M10_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_M10_MAD.wrist <- qnorm(res_M10_MAD.wrist$p.value/2)
+# res_L5_MAD.wrist <- wilcox.test(L5_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
+# z_L5_MAD.wrist <- qnorm(res_L5_MAD.wrist$p.value/2)
 
 ## Step 4: Day-to-day variability
 # Hip
