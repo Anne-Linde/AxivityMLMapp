@@ -20,8 +20,8 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
   data.pp <- data.frame()
   
   # Average metrics for each activity
-  foreach::foreach(subj = 1:length(participants)) %myinfix% {#, .packages = "GGIRread") %myinfix% {
-  #for(subj in 1:length(participants)){
+  #foreach::foreach(subj = 1:length(participants)) %myinfix% {#, .packages = "GGIRread") %myinfix% {
+  for(subj in 1:length(participants)){
     ENMO.hip <- c()
     ENMO.wrist <- c()
     MAD.hip <- c()
