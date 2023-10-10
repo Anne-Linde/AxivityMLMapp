@@ -2,7 +2,9 @@
 title: "Analysis of data requirements"
 author: "Annelinde Lettink"
 date: "10/9/2023"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -26,11 +28,13 @@ for (function_file in dir(my_functions_folder, full.names = T)) source(function_
 data.castor <- load.castor(filepath.castor, filename.castor, cohort = c(3))
 ```
 
-## Determine criteria for generation of reliable estimates
+### Determine criteria for generation of reliable estimates
 
 In this script, the 6-step process is applied as method to derive sample-specific valid day criterion for both the MLM app and Axivity (hip and wrist) data (Bingham et al., 2016)
 
-# Step 1: Determine minimum wear-time
+## Step 1: Determine minimum wear-time
+
+# Axivity
 
 ```{r Step 1 Axivity, echo=FALSE}
 # Number of accelerometer files at start
@@ -54,10 +58,16 @@ weartime.wrist <- apply.7080rule(savedir.wrist, method = "axivity")
 paste0("minimum required wear time wrist: ", weartime.wrist, " min (", weartime.wrist/60, " h)")
 ```
 
+# My Little Moves app 
+
 ```{r Step 1 MLM app, echo=FALSE}
 ## Step 1: Determine the length of one day of data
 # Load app data for all cohorts
 data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementperiod = 1, sep = ";")
+
+# Note 98MLM027 (wrong in Castor, code was used by 98MLM028 adjusted at 2023-10-10 but not yet in export, this subj. was excluded so use the following lines L63-64 for exclusion of data)
+index <- which(data.app$castorID == "98MLM027")
+data.app <- data.app[-index,] # Remove rows
 
 # Number of participants at start
 paste0("number of participants: ", length(unique(data.app$castorID)))
@@ -71,7 +81,9 @@ minimumtime <- apply.7080rule(method = "app", data.app = valid_data_8h1d)
 paste0("minimum time app: ", minimumtime, " min (", minimumtime/60, " h)")
 ```
 
-# Step 2: Process 7-day-data
+## Step 2: Process 7-day-data
+
+# Axivity
 
 ```{r Step 2 Axivity, echo=FALSE}
 savedir.hip <- paste0(epochdir.hip, "/7d18h")
@@ -144,19 +156,19 @@ R.walk.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 1)]
 # Estimates per milestone
 # Hip
 estimates.nocrawl.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.nocrawl.hip) 
-print("Hip: ", length(unique(unique(estimates.nocrawl.hip$id))), " children do not crawl yet")
+print(paste0("Hip: ", length(unique(unique(estimates.nocrawl.hip$id))), " children do not crawl yet"))
 estimates.crawl.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.crawl.hip) 
-print("Hip: ", length(unique(unique(estimates.crawl.hip$id))), " children can crawl but not walk")
+print(paste0("Hip: ", length(unique(unique(estimates.crawl.hip$id))), " children can crawl but not walk"))
 estimates.walk.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.walk.hip) 
-print("Hip: ", length(unique(unique(estimates.walk.hip$id))), " children can walk")
+print(paste0("Hip: ", length(unique(unique(estimates.walk.hip$id))), " children can walk"))
 
 #Wrist
 estimates.nocrawl.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.nocrawl.wrist)
-print("Wrist: ", length(unique(unique(estimates.nocrawl.wrist$id))), " children do not crawl yet")
+print(paste0("Wrist: ", length(unique(unique(estimates.nocrawl.wrist$id))), " children do not crawl yet"))
 estimates.crawl.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.crawl.wrist) 
-print("Wrist: ", length(unique(unique(estimates.crawl.wrist$id))), " children can crawl but not walk")
+print(paste0("Wrist: ", length(unique(unique(estimates.crawl.wrist$id))), " children can crawl but not walk"))
 estimates.walk.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.walk.wrist) 
-print("Wrist: ", length(unique(unique(estimates.walk.wrist$id))), " children can walk")
+print(paste0("Wrist: ", length(unique(unique(estimates.walk.wrist$id))), " children can walk"))
 
 #Both
 estimates.nocrawl.both <- merge(estimates.nocrawl.hip, estimates.nocrawl.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
@@ -164,7 +176,7 @@ estimates.nocrawl.both$ENMO.both <- estimates.nocrawl.both$ENMO.x * estimates.no
 estimates.nocrawl.both$ig_ENMO.both <- estimates.nocrawl.both$ig_ENMO.x * estimates.nocrawl.both$ig_ENMO.y
 estimates.nocrawl.both$MAD.both <- estimates.nocrawl.both$MAD.x * estimates.nocrawl.both$MAD.y
 estimates.nocrawl.both$ig_MAD.both <- estimates.nocrawl.both$ig_MAD.x * estimates.nocrawl.both$ig_MAD.y
-print("Hip * Wrist: ", length(unique(unique(estimates.nocrawl.both$id))), " children do not crawl yet")
+print(paste0("Hip * Wrist: ", length(unique(unique(estimates.nocrawl.both$id))), " children do not crawl yet"))
 
 estimates.crawl.both <- merge(estimates.crawl.hip, estimates.crawl.wrist, by = c("id", "date", "days", "weekday"))
 # Merge the estimate date.frames for hip and wrist, then calculate the metrics
@@ -172,18 +184,20 @@ estimates.crawl.both$ENMO.both <- estimates.crawl.both$ENMO.x * estimates.crawl.
 estimates.crawl.both$ig_ENMO.both <- estimates.crawl.both$ig_ENMO.x * estimates.crawl.both$ig_ENMO.y
 estimates.crawl.both$MAD.both <- estimates.crawl.both$MAD.x * estimates.crawl.both$MAD.y
 estimates.crawl.both$ig_MAD.both <- estimates.crawl.both$ig_MAD.x * estimates.crawl.both$ig_MAD.y
-print("Hip * Wrist: ", length(unique(unique(estimates.crawl.both$id))), " children can crawl but not walk")
+print(paste0("Hip * Wrist: ", length(unique(unique(estimates.crawl.both$id))), " children can crawl but not walk"))
 
 estimates.walk.both <- merge(estimates.walk.hip, estimates.walk.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
 estimates.walk.both$ENMO.both <- estimates.walk.both$ENMO.x * estimates.walk.both$ENMO.y
 estimates.walk.both$ig_ENMO.both <- estimates.walk.both$ig_ENMO.x * estimates.walk.both$ig_ENMO.y
 estimates.walk.both$MAD.both <- estimates.walk.both$MAD.x * estimates.walk.both$MAD.y
 estimates.walk.both$ig_MAD.both <- estimates.walk.both$ig_MAD.x * estimates.walk.both$ig_MAD.y
-print("Hip * Wrist: ", length(unique(unique(estimates.walk.both$id))), " children can walk")
+print(paste0("Hip * Wrist: ", length(unique(unique(estimates.walk.both$id))), " children can walk"))
 
 
 rm(tmp, R.nocrawl.hip, R.crawl.hip, R.walk.hip, tmp.hip, R.nocrawl.wrist, R.crawl.wrist, R.walk.wrist, tmp.wrist, milestones, counter, crawl, walk, pp, pp.hip, pp.wrist, subj)
 ```
+
+# My Little Moves app
 
 ```{r Step 2 MLM app, echo=FALSE}
 valid_data_16h7d <- validday.app(data.app, minhours = 16, mindays = 7, savedir = filepath.app) 
@@ -194,7 +208,9 @@ minimumtime <- apply.7080rule(method = "app", data.app = valid_data_8h1d)
 paste0("minimum time app: ", minimumtime, " min (", minimumtime/60, " h)")
 ```
 
-# Step 3: Determine the inclusion of a weekend day
+## Step 3: Determine the inclusion of a weekend day
+
+# Axivity
 
 ```{r Step 3 Axivity, echo=FALSE}
 library(dplyr)
@@ -259,6 +275,7 @@ paste0("hip*wrist ENMO intensity gradient: Zscore =" ,z_ig_MAD.both, ", p-value 
 
 rm(desc.weekend.hip, res_ENMO.hip, z_ENMO.hip, z_ig_ENMO.hip, res_MAD.hip, z_MAD.hip, res_ig_MAD.hip, z_ig_MAD.hip, desc.weekend.wrist, res_ENMO.wrist, z_ENMO.wrist, res_ig_ENMO.wrist, z_ig_ENMO.wrist, res_MAD.wrist, z_MAD.wrist, res_ig_MAD.wrist, z_ig_MAD.wrist, desc.weekend.both, res_ENMO.both, z_ENMO.both, res_ig_ENMO.both, z_ig_ENMO.both, res_MAD.both, z_MAD.both, res_ig_MAD.both)
 ```
+# My Little Moves app
 
 ```{r Step 3 MLM app, echo=FALSE}
 ## Step 3: Weekend day inclusion?
@@ -284,8 +301,9 @@ paste0("Sleep: Zscore =" , z_sleep, ", p-value = ", res_sleep$p.value)
 rm(res_PA, z_PA, res_SB, z_SB, res_sleep, z_sleep)
 ```
 
-# Step 4: Examine day-to-day variability
+## Step 4: Examine day-to-day variability
 
+# Axivity
 ```{r Step 4 Axivity, echo=FALSE}
 ## Step 4: Day-to-day variability
 # Hip
@@ -321,6 +339,7 @@ rm(day_day_ENMO.hip, day_day_ig_ENMO.hip, day_day_MAD.hip, day_day_ig_MAD.hip,
    day_day_ENMO.wrist, day_day_ig_ENMO.wrist, day_day_MAD.wrist, day_day_ig_MAD.wrist,
    day_day_ENMO.both, day_day_ig_ENMO.both, day_day_MAD.both, day_day_ig_MAD.both)
 ```
+# My Little Moves app
 
 ```{r Step 4 MLM app, echo=FALSE}
 ## Step 4: Day-to-day variability
@@ -333,8 +352,9 @@ paste0("Sleep: Chi-square =" , day_day_sleep$statistic, ", p-value = ", day_day_
 rm(day_day_PA, day_day_SB, day_day_sleep)
 ```
 
-# Step 5: Calculate single day intraclass correlation (ICC) (2,1)
+## Step 5: Calculate single day intraclass correlation (ICC) (2,1)
 
+# Axivity
 ```{r Step 5 Axivity, echo=FALSE}
 # Run intra-class correlations (ICC). Random consistency models, using single measure, ICC(2,1). Single measure is ICC for single day.
 # Hip
@@ -667,6 +687,7 @@ paste0("Hip * wrist MAD intensity gradient walking: ICC =" , ICC.igMAD.both.walk
 
 rm(ratings_ENMO.both.walk, ratings_ENMO.both.walk_long, ratings_ENMO.both.nocrawl, ratings_ENMO.both.nocrawl_long, ratings_ENMO.both.crawl, ratings_ENMO.both.crawl_long, ratings_igENMO.both.walk, ratings_igENMO.both.walk_long, ratings_igENMO.both.nocrawl, ratings_igENMO.both.nocrawl_long, ratings_igENMO.both.crawl, ratings_igENMO.both.crawl_long, ratings_MAD.both.walk, ratings_MAD.both.walk_long, ratings_MAD.both.nocrawl, ratings_MAD.both.nocrawl_long, ratings_MAD.both.crawl, ratings_MAD.both.crawl_long, ratings_igMAD.both.walk, ratings_igMAD.both.walk_long, ratings_igMAD.both.nocrawl, ratings_igMAD.both.nocrawl_long, ratings_igMAD.both.crawl, ratings_igMAD.both.crawl_long)
 ```
+# My Little Moves app
 
 ```{r Step 5 MLM pp, echo=FALSE}
 # Run intra-class correlations (ICC). Random consistency models, using single measure, ICC(2,1). Single measure is ICC for single day.
@@ -700,7 +721,9 @@ paste0("Sleep: ICC =" , ICC.sleep$value, "[", ICC.sleep$lbound, ";", ICC.sleep$u
 rm(valid_data_16h7d, ratings_PA_long, ratings_PA, ratings_SB_long, ratings_SB, ratings_sleep_long, ratings_sleep)
 ```
 
-# Step 6: Calculate number of days required to reach reliability
+## Step 6: Calculate number of days required to reach reliability
+
+# Axivity
 
 ```{r Step 6 Axivity, echo=FALSE}
 # Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
@@ -854,6 +877,7 @@ spearman.brown(singleICC = ICC.MAD.both.walk$value, desiredR = 0.7)
 print("To reach 0.7 reliability intensity gradient MAD: ")
 spearman.brown(singleICC = ICC.igMAD.both.walk$value, desiredR = 0.7)
 ```
+# My Little Moves app
 
 ```{r Step 6 MLM pp, echo=FALSE}
 # Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
