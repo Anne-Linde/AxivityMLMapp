@@ -18,6 +18,12 @@ load.app <- function(filepath, filename, cohort, measurementperiod, sep) {
   for(coh in 1:length(cohort)){
     tmp <- data.app[data.app$cohort == cohort[coh], ] #Select data for cohort
     tmp.data <- rbind(tmp.data, tmp)
+    if(cohort[coh] == 2 | cohort[coh] == 3){ #99MLM002 cohort was not assigned, as included in multiple cohorts
+      if(!"99MLM002" %in% data.app$castorID){ # Include only if data was not yet selected
+        tmp <- data.app[data.app$castorID == "99MLM002", ] #Select data for cohort
+        tmp.data <- rbind(tmp.data, tmp)
+      }
+    }
   }
   index <- which(is.na(tmp.data$castorID))
   tmp.data <- tmp.data[-index,] # Remove empty rows
