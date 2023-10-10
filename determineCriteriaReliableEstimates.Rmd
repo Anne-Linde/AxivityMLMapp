@@ -32,7 +32,7 @@ data.castor <- load.castor(filepath.castor, filename.castor, cohort = c(3))
 
 In this script, the 6-step process is applied as method to derive sample-specific valid day criterion for both the MLM app and Axivity (hip and wrist) data (Bingham et al., 2016)
 
-## Step 1: Determine minimum wear-time
+## Step 1: Determine minimum wear-time 
 
 # Axivity
 
