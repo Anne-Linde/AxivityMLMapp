@@ -53,7 +53,7 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
         ENMO <- median(tmp.hip$ENMO, na.rm = TRUE) # Save ENMO
         ENMO.hip <- c(ENMO.hip, ENMO)
         MAD <- median(tmp.hip$MAD, na.rm = TRUE) # Save MAD
-        MAD.hip <- c(MAD.hip, ENMO)
+        MAD.hip <- c(MAD.hip, MAD)
       } else {
         ENMO.hip <- c(ENMO.hip, NA)
         MAD.hip <- c(MAD.hip, NA)
@@ -63,7 +63,7 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
         ENMO <- median(tmp.wrist$ENMO, na.rm = TRUE) # Save ENMO
         ENMO.wrist <- c(ENMO.wrist, ENMO)
         MAD <- median(tmp.wrist$MAD, na.rm = TRUE) # Save MAD
-        MAD.wrist <- c(MAD.wrist, ENMO)
+        MAD.wrist <- c(MAD.wrist, MAD)
       } else {
         ENMO.wrist <- c(ENMO.wrist, NA)
         MAD.wrist <- c(MAD.wrist, NA)
