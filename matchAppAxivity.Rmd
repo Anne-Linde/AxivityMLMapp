@@ -1,0 +1,378 @@
+---
+title: "Agreement My Little Moves App and Accelerometers"
+author: "Annelinde Lettink"
+date: "10/12/2023"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+This document presents the output of the data synchronization between the My Little Moves app and accelerometer data.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+date <- "20231010" # Date 
+tz = "Europe/Amsterdam"
+# Use preprocessed Axivity data (data without non-wear)
+filepath.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/hip/nonwear_removed"
+filepath.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/wrist/nonwear_removed"
+# Use app data activities
+filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
+filename.app <- "/20230918_activities_castor_linked_duration.csv"
+# Path to directory to save the data list
+savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output"
+
+# source functions directly from file, to be replaced by package installation:
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
+
+## Load data
+data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data
+rm(filepath.app, filename.app, my_functions_folder, function_file)
+# Set up for plots
+level_order <- c("actiefverplaatsen", "passiefverplaatsen", "actiefspelen", "rustigspelen", "weetnietspelen", 
+                 "actiefbeeldscherm", "passiefbeeldscherm", "zittenliggen", "etendrinken", 
+                 "verzorging", "slapen", "iemandanders", "other", "weetniet")
+labels_EN <- c("Active transport", "Passive transport", "Active play", "Quiet play", "Don't know play",
+               "Active screen use", "Passive screen use", "Sitting/lying", "Eating/drinking",
+               "Personal care", "Sleeping", "Child was with someone else", "Other activity", "I don't know")
+```
+
+```{r Match data and prepare for further analyses and plots, include=FALSE}
+## Match axivity data to app entries
+#run L36 once: then load in data from saved file
+#data.app.axivity <- match.app.axivity(data.app, filepath.hip, filepath.wrist, tz, date)
+load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_ax_entry_20231010.RData")
+rm(filepath.hip, filepath.wrist, tz)
+# From gravitational units in g to mg
+data.app.axivity <- data.pp
+data.app.axivity$ENMO.hip <- data.app.axivity$ENMO.hip * 1000
+data.app.axivity$ENMO.wrist <- data.app.axivity$ENMO.wrist * 1000
+data.app.axivity$MAD.hip <- data.app.axivity$MAD.hip * 1000
+data.app.axivity$MAD.wrist <- data.app.axivity$MAD.wrist * 1000
+rm(data.pp)
+# Combine data for both placements
+#data.app.axivity$ENMO.both = data.app.axivity$ENMO.hip * data.app.axivity$ENMO.wrist 
+#data.app.axivity$MAD.both = data.app.axivity$MAD.hip * data.app.axivity$MAD.wrist 
+
+# Reshape data to long format
+df_long <- tidyr::gather(data.app.axivity, metric, value, ENMO.hip:MAD.wrist)
+#df_long <- tidyr::gather(data.app.axivity, metric, value, ENMO.hip:MAD.both)
+df_long.ENMO <- df_long[which(startsWith(df_long$metric, "ENMO")),]
+df_long.MAD <- df_long[which(startsWith(df_long$metric, "MAD")),]
+```
+
+## Per activity category
+
+This section presents the results per activity category.
+
+```{r Descriptive statistics category, echo=FALSE}
+library(dplyr)
+desc_categories <- data.app.axivity %>% 
+  group_by(activity) %>% 
+  summarize(Mduration = median(total_duration),
+            LL = quantile(total_duration, .25),
+            UL = quantile(total_duration, .75),
+            Menmo.hip = median(ENMO.hip, na.rm = TRUE),
+            LLenmo.hip = quantile(ENMO.hip, .25, na.rm = TRUE),
+            ULenmo.hip = quantile(ENMO.hip, .75, na.rm = TRUE),
+            Menmo.wrist = median(ENMO.wrist, na.rm = TRUE),
+            LLenmo.wrist = quantile(ENMO.wrist, .25, na.rm = TRUE),
+            ULenmo.wrist = quantile(ENMO.wrist, .75, na.rm = TRUE),
+            Mmad.hip = median(MAD.hip, na.rm = TRUE),
+            LLmad.hip = quantile(MAD.hip, .25, na.rm = TRUE),
+            ULmad.hip = quantile(MAD.hip, .75, na.rm = TRUE),
+            Mmad.wrist = median(MAD.wrist, na.rm = TRUE),
+            LLmad.wrist = quantile(MAD.wrist, .25, na.rm = TRUE),
+            ULmad.wrist = quantile(MAD.wrist, .75, na.rm = TRUE),
+            n = n(), 
+            ) %>% 
+            mutate(percent = n / sum(n)*100)
+desc_categories
+```
+```{r Boxplot categories, echo=FALSE}
+bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "activity", order_categories = level_order)
+bxp_ENMO
+bxp_MAD <- create.boxplot(data_long = df_long.MAD, metric = "MAD", per = "activity", order_categories = level_order)
+bxp_MAD
+
+combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "boxplot_categories.png")
+```
+```{r Scatterplot categories, echo=FALSE}
+scatter_ENMO.hip <- create.scatterplot(data = data.app.axivity, metric = "ENMO", placement = "hip", per = "activity", order_categories = level_order)
+plot(scatter_ENMO.hip)
+scatter_ENMO.wrist <- create.scatterplot(data = data.app.axivity, metric = "ENMO", placement = "wrist", per = "activity", order_categories = level_order)
+plot(scatter_ENMO.wrist)
+combine.save.plots(scatter_ENMO.hip, scatter_ENMO.wrist, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_ENMO_categories.png")
+
+scatter_MAD.hip <- create.scatterplot(data = data.app.axivity, metric = "MAD", placement = "hip", per = "activity", order_categories = level_order)
+plot(scatter_MAD.hip)
+scatter_MAD.wrist <- create.scatterplot(data = data.app.axivity, metric = "MAD", placement = "wrist", per = "activity", order_categories = level_order)
+plot(scatter_MAD.wrist)
+combine.save.plots(scatter_MAD.hip, scatter_MAD.wrist, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_MAD_categories.png")
+```
+```{r Density plots categories, echo = FALSE}
+density_ENMO.hip <- create.densityplot(data = data.app.axivity, metric = "ENMO", placement = "hip", per = "activity", order_categories = level_order)
+plot(density_ENMO.hip)
+density_ENMO.wrist <- create.densityplot(data = data.app.axivity, metric = "ENMO", placement = "wrist", per = "activity", order_categories = level_order)
+plot(density_ENMO.wrist)
+combine.save.plots(density_ENMO.hip, density_ENMO.wrist, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_ENMO_categories.png")
+
+density_MAD.hip <- create.densityplot(data = data.app.axivity, metric = "MAD", placement = "hip", per = "activity", order_categories = level_order)
+plot(density_MAD.hip)
+density_MAD.wrist <- create.densityplot(data = data.app.axivity, metric = "MAD", placement = "wrist", per = "activity", order_categories = level_order)
+plot(density_MAD.wrist)
+combine.save.plots(density_MAD.hip, density_MAD.wrist, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_MAD_categories.png")
+```
+
+# Descriptive statistics within categories per posture
+
+```{r Descriptive statistics active play posture, echo=FALSE}
+library(dplyr)
+data.app.axivity.posture <- data.app.axivity[data.app.axivity$activity %in% c("actiefspelen", "rustigspelen", "weetnietspelen", "zittenliggen"),]
+
+desc_categories.posture <- data.app.axivity %>% 
+  group_by(activity, posture) %>% 
+  summarize(Mduration = median(total_duration),
+            LL = quantile(total_duration, .25),
+            UL = quantile(total_duration, .75),
+            Menmo.hip = median(ENMO.hip, na.rm = TRUE),
+            LLenmo.hip = quantile(ENMO.hip, .25, na.rm = TRUE),
+            ULenmo.hip = quantile(ENMO.hip, .75, na.rm = TRUE),
+            Menmo.wrist = median(ENMO.wrist, na.rm = TRUE),
+            LLenmo.wrist = quantile(ENMO.wrist, .25, na.rm = TRUE),
+            ULenmo.wrist = quantile(ENMO.wrist, .75, na.rm = TRUE),
+            Mmad.hip = median(MAD.hip, na.rm = TRUE),
+            LLmad.hip = quantile(MAD.hip, .25, na.rm = TRUE),
+            ULmad.hip = quantile(MAD.hip, .75, na.rm = TRUE),
+            Mmad.wrist = median(MAD.wrist, na.rm = TRUE),
+            LLmad.wrist = quantile(MAD.wrist, .25, na.rm = TRUE),
+            ULmad.wrist = quantile(MAD.wrist, .75, na.rm = TRUE),
+            n = n(), 
+            ) %>% 
+            mutate(percent = n / sum(n)*100)
+desc_categories.posture
+```
+
+# Sitting/lying
+```{r Plot postures sitting/lying, echo = FALSE}
+# Zitten liggen
+df_long.ENMO.sittinglying <- df_long.ENMO[df_long.ENMO$activity=="zittenliggen",]
+df_long.MAD.sittinglying <- df_long.MAD[df_long.MAD$activity=="zittenliggen",]
+data.app.axivity.sittinglying <- data.app.axivity[data.app.axivity$activity=="zittenliggen",]
+
+#Boxplot
+bxp_ENMO.sit <- create.boxplot(data_long = df_long.ENMO.sittinglying, metric = "ENMO", per = "posture", order_categories = names(df_long.ENMO.sittinglying$posture))
+bxp_MAD.sit <- create.boxplot(data_long = df_long.MAD.sittinglying, metric = "MAD", per = "posture", order_categories = names(df_long.MAD.sittinglying$posture))
+combine.save.plots(bxp_ENMO.sit, bxp_MAD.sit, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "boxplot_sittinglying_postures.png")
+
+#Scatterplots
+scatter_ENMO.hip.sit <- create.scatterplot(data = data.app.axivity.sittinglying, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(scatter_ENMO.hip.sit)
+scatter_ENMO.wrist.sit <- create.scatterplot(data = data.app.axivity.sittinglying, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(scatter_ENMO.wrist.sit)
+combine.save.plots(scatter_ENMO.hip.sit, scatter_ENMO.wrist.sit, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_ENMO_sittinglying_postures.png")
+
+scatter_MAD.hip.sit <- create.scatterplot(data = data.app.axivity.sittinglying, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(scatter_MAD.hip.sit)
+scatter_MAD.wrist.sit <- create.scatterplot(data = data.app.axivity.sittinglying, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(scatter_MAD.wrist.sit)
+combine.save.plots(scatter_MAD.hip.sit, scatter_MAD.wrist.sit, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_MAD_sittinglying_postures.png")
+
+#Density plots
+density_ENMO.hip.sit <- create.densityplot(data = data.app.axivity.sittinglying, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(density_ENMO.hip.sit)
+density_ENMO.wrist.sit <- create.densityplot(data = data.app.axivity.sittinglying, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(density_ENMO.wrist.sit)
+combine.save.plots(density_ENMO.hip.sit, density_ENMO.wrist.sit, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_ENMO_sittinglying_postures.png")
+
+density_MAD.hip.sit <- create.densityplot(data = data.app.axivity.sittinglying, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(density_MAD.hip.sit)
+density_MAD.wrist.sit <- create.densityplot(data = data.app.axivity.sittinglying, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.sittinglying$posture))
+plot(density_MAD.wrist.sit)
+combine.save.plots(density_MAD.hip.sit, density_MAD.wrist.sit, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_MAD_sittinglying_postures.png")
+```
+
+# Active play
+
+```{r Plot postures active play, echo = FALSE}
+# Zitten liggen
+df_long.ENMO.activeplay <- df_long.ENMO[df_long.ENMO$activity=="actiefspelen",]
+df_long.MAD.activeplay <- df_long.MAD[df_long.MAD$activity=="actiefspelen",]
+data.app.axivity.activeplay <- data.app.axivity[data.app.axivity$activity=="actiefspelen",]
+
+#Boxplot
+bxp_ENMO.aplay <- create.boxplot(data_long = df_long.ENMO.activeplay, metric = "ENMO", per = "posture", order_categories = names(df_long.ENMO.activeplay$posture))
+bxp_MAD.aplay <- create.boxplot(data_long = df_long.MAD.activeplay, metric = "MAD", per = "posture", order_categories = names(df_long.MAD.activeplay$posture))
+combine.save.plots(bxp_ENMO.aplay, bxp_MAD.aplay, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "boxplot_activeplay_postures.png")
+
+#Scatterplots
+scatter_ENMO.hip.aplay <- create.scatterplot(data = data.app.axivity.activeplay, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(scatter_ENMO.hip.aplay)
+scatter_ENMO.wrist.aplay <- create.scatterplot(data = data.app.axivity.activeplay, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(scatter_ENMO.wrist.aplay)
+combine.save.plots(scatter_ENMO.hip.aplay, scatter_ENMO.wrist.aplay, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_ENMO_activeplay_postures.png")
+
+scatter_MAD.hip.aplay <- create.scatterplot(data = data.app.axivity.activeplay, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(scatter_MAD.hip.aplay)
+scatter_MAD.wrist.aplay <- create.scatterplot(data = data.app.axivity.activeplay, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(scatter_MAD.wrist.aplay)
+combine.save.plots(scatter_MAD.hip.aplay, scatter_MAD.wrist.aplay, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_MAD_activeplay_postures.png")
+
+#Density plots
+density_ENMO.hip.aplay <- create.densityplot(data = data.app.axivity.activeplay, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(density_ENMO.hip.aplay)
+density_ENMO.wrist.aplay <- create.densityplot(data = data.app.axivity.activeplay, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(density_ENMO.wrist.aplay)
+combine.save.plots(density_ENMO.hip.aplay, density_ENMO.wrist.aplay, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_ENMO_activeplay_postures.png")
+
+density_MAD.hip.aplay <- create.densityplot(data = data.app.axivity.activeplay, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(density_MAD.hip.aplay)
+density_MAD.wrist.aplay <- create.densityplot(data = data.app.axivity.activeplay, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.activeplay$posture))
+plot(density_MAD.wrist.aplay)
+combine.save.plots(density_MAD.hip.sit, density_MAD.wrist.aplay, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_MAD_activeplay_postures.png")
+```
+
+# Quiet play
+
+```{r Plot postures quiet play, echo = FALSE}
+# Zitten liggen
+df_long.ENMO.quietplay <- df_long.ENMO[df_long.ENMO$activity=="rustigspelen",]
+df_long.MAD.quietplay <- df_long.MAD[df_long.MAD$activity=="rustigspelen",]
+data.app.axivity.quietplay <- data.app.axivity[data.app.axivity$activity=="rustigspelen",]
+
+#Boxplot
+bxp_ENMO.qplay <- create.boxplot(data_long = df_long.ENMO.quietplay, metric = "ENMO", per = "posture", order_categories = names(df_long.ENMO.quietplay$posture))
+bxp_MAD.qplay <- create.boxplot(data_long = df_long.MAD.quietplay, metric = "MAD", per = "posture", order_categories = names(df_long.MAD.quietplay$posture))
+combine.save.plots(bxp_ENMO.qplay, bxp_MAD.qplay, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "boxplot_quietplay_postures.png")
+
+#Scatterplots
+scatter_ENMO.hip.qplay <- create.scatterplot(data = data.app.axivity.quietplay, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(scatter_ENMO.hip.qplay)
+scatter_ENMO.wrist.qplay <- create.scatterplot(data = data.app.axivity.quietplay, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(scatter_ENMO.wrist.qplay)
+combine.save.plots(scatter_ENMO.hip.qplay, scatter_ENMO.wrist.qplay, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_ENMO_quietplay_postures.png")
+
+scatter_MAD.hip.qplay <- create.scatterplot(data = data.app.axivity.quietplay, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(scatter_MAD.hip.qplay)
+scatter_MAD.wrist.qplay <- create.scatterplot(data = data.app.axivity.quietplay, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(scatter_MAD.wrist.qplay)
+combine.save.plots(scatter_MAD.hip.qplay, scatter_MAD.wrist.qplay, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_MAD_quietplay_postures.png")
+
+#Density plots
+density_ENMO.hip.qplay <- create.densityplot(data = data.app.axivity.quietplay, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(density_ENMO.hip.qplay)
+density_ENMO.wrist.qplay <- create.densityplot(data = data.app.axivity.quietplay, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(density_ENMO.wrist.qplay)
+combine.save.plots(density_ENMO.hip.qplay, density_ENMO.wrist.qplay, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_ENMO_quietplay_postures.png")
+
+density_MAD.hip.qplay <- create.densityplot(data = data.app.axivity.quietplay, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(density_MAD.hip.qplay)
+density_MAD.wrist.qplay <- create.densityplot(data = data.app.axivity.quietplay, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.quietplay$posture))
+plot(density_MAD.wrist.qplay)
+combine.save.plots(density_MAD.hip.sit, density_MAD.wrist.qplay, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_MAD_quietplay_postures.png")
+```
+
+# Don't know play
+
+```{r Plot postures dont know play, echo = FALSE}
+# Zitten liggen
+df_long.ENMO.dontknowplay <- df_long.ENMO[df_long.ENMO$activity=="weetnietspelen",]
+df_long.MAD.dontknowplay <- df_long.MAD[df_long.MAD$activity=="weetnietspelen",]
+data.app.axivity.dontknowplay <- data.app.axivity[data.app.axivity$activity=="weetnietspelen",]
+
+#Boxplot
+bxp_ENMO.dplay <- create.boxplot(data_long = df_long.ENMO.dontknowplay, metric = "ENMO", per = "posture", order_categories = names(df_long.ENMO.dontknowplay$posture))
+bxp_MAD.dplay <- create.boxplot(data_long = df_long.MAD.dontknowplay, metric = "MAD", per = "posture", order_categories = names(df_long.MAD.dontknowplay$posture))
+combine.save.plots(bxp_ENMO.dplay, bxp_MAD.dplay, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "boxplot_dontknowplay_postures.png")
+
+#Scatterplots
+scatter_ENMO.hip.dplay <- create.scatterplot(data = data.app.axivity.dontknowplay, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(scatter_ENMO.hip.dplay)
+scatter_ENMO.wrist.dplay <- create.scatterplot(data = data.app.axivity.dontknowplay, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(scatter_ENMO.wrist.dplay)
+combine.save.plots(scatter_ENMO.hip.dplay, scatter_ENMO.wrist.dplay, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_ENMO_dontknowplay_postures.png")
+
+scatter_MAD.hip.dplay <- create.scatterplot(data = data.app.axivity.dontknowplay, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(scatter_MAD.hip.dplay)
+scatter_MAD.wrist.dplay <- create.scatterplot(data = data.app.axivity.dontknowplay, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(scatter_MAD.wrist.dplay)
+combine.save.plots(scatter_MAD.hip.dplay, scatter_MAD.wrist.dplay, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_MAD_dontknowplay_postures.png")
+
+#Density plots
+density_ENMO.hip.dplay <- create.densityplot(data = data.app.axivity.dontknowplay, metric = "ENMO", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(density_ENMO.hip.dplay)
+density_ENMO.wrist.dplay <- create.densityplot(data = data.app.axivity.dontknowplay, metric = "ENMO", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(density_ENMO.wrist.dplay)
+combine.save.plots(density_ENMO.hip.dplay, density_ENMO.wrist.dplay, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_ENMO_dontknowplay_postures.png")
+
+density_MAD.hip.dplay <- create.densityplot(data = data.app.axivity.dontknowplay, metric = "MAD", placement = "hip", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(density_MAD.hip.dplay)
+density_MAD.wrist.dplay <- create.densityplot(data = data.app.axivity.dontknowplay, metric = "MAD", placement = "wrist", per = "posture", order_categories = unique(data.app.axivity.dontknowplay$posture))
+plot(density_MAD.wrist.dplay)
+combine.save.plots(density_MAD.hip.sit, density_MAD.wrist.dplay, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "density_MAD_dontknowplay_postures.png")
+```
+## Per movement behavior
+
+This section presents the results per 24-h movement behavior.
+
+```{r Descriptive statistics category 24h, echo=FALSE}
+library(dplyr)
+desc_behaviors <- data.app.axivity %>% 
+  group_by(behavior) %>% 
+  summarize(Mduration = median(total_duration),
+            LL = quantile(total_duration, .25),
+            UL = quantile(total_duration, .75),
+            Menmo.hip = median(ENMO.hip, na.rm = TRUE),
+            LLenmo.hip = quantile(ENMO.hip, .25, na.rm = TRUE),
+            ULenmo.hip = quantile(ENMO.hip, .75, na.rm = TRUE),
+            Menmo.wrist = median(ENMO.wrist, na.rm = TRUE),
+            LLenmo.wrist = quantile(ENMO.wrist, .25, na.rm = TRUE),
+            ULenmo.wrist = quantile(ENMO.wrist, .75, na.rm = TRUE),
+            Mmad.hip = median(MAD.hip, na.rm = TRUE),
+            LLmad.hip = quantile(MAD.hip, .25, na.rm = TRUE),
+            ULmad.hip = quantile(MAD.hip, .75, na.rm = TRUE),
+            Mmad.wrist = median(MAD.wrist, na.rm = TRUE),
+            LLmad.wrist = quantile(MAD.wrist, .25, na.rm = TRUE),
+            ULmad.wrist = quantile(MAD.wrist, .75, na.rm = TRUE),
+            n = n(), 
+            ) %>% 
+            mutate(percent = n / sum(n)*100)
+desc_behaviors
+```
+
+```{r Boxplot behaviors, echo=FALSE}
+bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+bxp_ENMO
+bxp_MAD <- create.boxplot(data_long = df_long.MAD, metric = "MAD", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+bxp_MAD
+
+combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "boxplot_behaviors.png")
+```
+```{r Scatterplot behaviors, echo=FALSE}
+scatter_ENMO.hip <- create.scatterplot(data = data.app.axivity, metric = "ENMO", placement = "hip", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(scatter_ENMO.hip)
+scatter_ENMO.wrist <- create.scatterplot(data = data.app.axivity, metric = "ENMO", placement = "wrist", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(scatter_ENMO.wrist)
+combine.save.plots(scatter_ENMO.hip, scatter_ENMO.wrist, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "scatter_ENMO_behaviors.png")
+
+scatter_MAD.hip <- create.scatterplot(data = data.app.axivity, metric = "MAD", placement = "hip", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(scatter_MAD.hip)
+scatter_MAD.wrist <- create.scatterplot(data = data.app.axivity, metric = "MAD", placement = "wrist", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(scatter_MAD.wrist)
+combine.save.plots(scatter_MAD.hip, scatter_MAD.wrist, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "scatter_MAD_behaviors.png")
+```
+
+```{r Density plots behaviors, echo = FALSE}
+density_ENMO.hip <- create.densityplot(data = data.app.axivity, metric = "ENMO", placement = "hip", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(density_ENMO.hip)
+density_ENMO.wrist <- create.densityplot(data = data.app.axivity, metric = "ENMO", placement = "wrist", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(density_ENMO.wrist)
+combine.save.plots(density_ENMO.hip, density_ENMO.wrist, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "density_ENMO_behaviors.png")
+
+density_MAD.hip <- create.densityplot(data = data.app.axivity, metric = "MAD", placement = "hip", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(density_MAD.hip)
+density_MAD.wrist <- create.densityplot(data = data.app.axivity, metric = "MAD", placement = "wrist", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+plot(density_MAD.wrist)
+combine.save.plots(density_MAD.hip, density_MAD.wrist, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "density_MAD_behaviors.png")
+```
