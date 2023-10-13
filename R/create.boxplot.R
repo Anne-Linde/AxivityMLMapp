@@ -1,5 +1,16 @@
-# metric one of c("ENMO", "MAD")
-# per one of c("activity", "posture', "behavior")
+#' create.boxplot
+#'
+#' @description 'create.boxplot' function description
+
+#' @param data_long Data description here
+#' @param metric A string that contains the name of the metric. One of c("ENMO", "MAD")
+#' @param per A string that indicating the plot windows. One of c("activity", "behavior, "posture")
+#' @param order_categories Vector with the label names in the desired order
+
+#' @return DESCRIPTION HERE
+#' @import ggplot2
+#' @export
+#' 
 create.boxplot <- function(data_long, metric, per, order_categories){
   
   if(per == "activity"){

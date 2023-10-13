@@ -1,6 +1,16 @@
-# metric one of c("ENMO", "MAD")
-# placement one of c("hip", "wrist")
-# per one of c("activity", "behavior")
+#' create.densityplot
+#'
+#' @description 'create.densityplot' loads the cleaned app data
+
+#' @param data Data description here
+#' @param metric A string that contains the name of the metric. One of c("ENMO", "MAD")
+#' @param placement A string that contains the placement of the acceleromter. One of c("hip", "wrist")
+#' @param per A string that indicating the plot windows. One of c("activity", "behavior, "posture")
+#' @param order_categories Vector with the label names in the desired order
+
+#' @return DESCRIPTION HERE
+#' @import ggplot2
+#' @export
 
 create.densityplot <- function(data, metric, placement, per, order_categories){
   if (metric == "ENMO")
