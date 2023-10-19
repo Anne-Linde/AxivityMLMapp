@@ -1,7 +1,6 @@
 # Function to remove non-wear from data
 # input data is a data.frame object
 
-
 #' remove.nonwear
 #'
 #' @description 'remove.nonwear' Removes the timestamp data indicated as non-wear
@@ -24,6 +23,20 @@ remove.nonwear <- function(epochdir.hip, epochdir.wrist, savefolder, data.castor
     cat(file)
     load(paste(epochdir, filelist[file], sep = "/")) # Load .RData file
     
+    #Remove deviations from wear protocol: right worn instead of left
+    rightwrist <- NA
+    if(filelist[file] == "05MLM001_00_wrist.cwa.RData"){
+      startDeviation <- strptime(paste("20-10-2022 ", "18:00:00"), format = "%d-%m-%Y %H:%M", tz = "Europe/Amsterdam")
+      rightwrist <- which(epochdata$agg.epoch$timestampPOSIX >= startDeviation)
+    } else if(filelist[file] == "98MLM050_00_wrist.cwa.RData"){
+     startDeviation <- strptime(paste("11-09-2023 ", "16:00"), format = "%d-%m-%Y %H:%M")
+     endDeviation <- strptime("15-09-2023", format = "%d-%m-%Y")
+     rightwrist <- which(epochdata$agg.epoch$timestampPOSIX > startDeviation & epochdata$agg.epoch$timestampPOSIX < endDeviation)
+    }
+    if(!is.na(rightwrist) & length(rightwrist) > 1){ # Remove deviations from wear protocol
+      epochdata$agg.epoch <- epochdata$agg.epoch[-rightwrist,] 
+    }
+    
     if(nrow(epochdata$agg.epoch) > 0){
       #index_nw <- which(epochdata$agg.epoch$nonwear == 1) 
       index_nw <- c(which(epochdata$agg.epoch$nonwear == 1), which(epochdata$agg.epoch$additonal_nonwear == 1))
@@ -35,7 +48,7 @@ remove.nonwear <- function(epochdir.hip, epochdir.wrist, savefolder, data.castor
       pp <- strsplit(filelist[file], "_")[[1]][1]
       pp_characteristics <- data.castor[which(data.castor$Participant.Id == pp),]
       attachment_axivity <- as.Date(pp_characteristics$Time_Acc_start_1, format = "%d-%m-%Y")
-      heuristic_nw <- which(epochdata$agg.epoch$timestampPOSIX < strptime(attachment_axivity, format = "%d-%m-%Y %H:%M"))
+      heuristic_nw <- which(epochdata$agg.epoch$timestampPOSIX < strptime(attachment_axivity, format = "%Y-%m-%d"))
       
       # Remove data after wear protocol was finished (i.e. 8 days wear time)
       if(pp_characteristics$Date_measurement_period_1 == ""){
