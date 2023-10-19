@@ -93,7 +93,6 @@ paste0("hip: accelerometer files that provide 7 days of at least 18 h: ", length
 savedir.wrist <- paste0(epochdir.wrist, "/7d18h")
 validday.axivity(epochdir = epochdir.wrist, epochlength = 5, minhours = 18, mindays = 7, savedir = savedir.wrist, data.castor, analysis = "reliability") 
 paste0("wrist: accelerometer files that provide 7 days of at least 18 h: ", length(list.files(savedir.wrist, pattern = ".RData")), "(", length(list.files(savedir.wrist, pattern = ".RData"))/length(list.files(paste0(epochdir.wrist, "/1d8h"), pattern = ".RData"))*100," %)")
-
 ## Generate the outcomes per accelerometer recording (per day)
 axivity.estimates.hip <- estimates.axivity(savedir.hip) 
 axivity.estimates.wrist <- estimates.axivity(savedir.wrist)
@@ -101,8 +100,6 @@ axivity.estimates.wrist <- estimates.axivity(savedir.wrist)
 axivity.estimates.both <- merge(axivity.estimates.hip, axivity.estimates.wrist, by = c("id", "date"))
 axivity.estimates.both$ENMO.both <- axivity.estimates.both$ENMO.x * axivity.estimates.both$ENMO.y
 axivity.estimates.both$MAD.both <- axivity.estimates.both$MAD.x * axivity.estimates.both$MAD.y
-axivity.estimates.both$ENMOig.both <- axivity.estimates.both$ig_ENMO.x * axivity.estimates.both$ig_ENMO.y
-axivity.estimates.both$MADig.both <- axivity.estimates.both$ig_MAD.x * axivity.estimates.both$ig_MAD.y
 ```
 
 ```{r Step 2 Axivity estimates per milestone group, echo=FALSE}
@@ -119,7 +116,8 @@ walk <- c()
 counter = 1
 for(subj in 1:(length(pp.hip)+length(pp.wrist))) { # For each subject
   tmp <- milestones[milestones$castorID==pp[counter],] # Select the milestone data
-  if(tmp$age.group == 5 || tmp$age.group== 4){ #if child is 2-4 years old, assume ability to crawl and walk
+  if(nrow(tmp)>0){
+    if(tmp$age.group == 5 || tmp$age.group== 4){ #if child is 2-4 years old, assume ability to crawl and walk
     crawl <- c(crawl, 1)
     walk <- c(walk, 1)
   } else if(tmp$age.group == 1) { # It the child is 0-6 months, assume the child cannot walk and ask whether the child can crawl
@@ -135,6 +133,11 @@ for(subj in 1:(length(pp.hip)+length(pp.wrist))) { # For each subject
       walk <- c(walk, 1)
     } else {walk <- c(walk, 0)}
   }
+  } else {
+        walk <- c(walk, NA)
+        crawl <- c(crawl, NA)
+  }
+  
   counter = counter + 1
   if(subj == length(pp.hip)){
     tmp.hip <- as.data.frame(cbind(pp, crawl, walk))
@@ -149,50 +152,38 @@ tmp.wrist <- as.data.frame(cbind(pp, crawl, walk))
 R.nocrawl.hip <- tmp.hip$pp[which(tmp.hip$crawl == 0 & tmp.hip$walk == 0)]
 R.crawl.hip <- tmp.hip$pp[which(tmp.hip$crawl == 1 & tmp.hip$walk == 0)]
 R.walk.hip <- tmp.hip$pp[which(tmp.hip$crawl == 1 & tmp.hip$walk == 1)]
+print(paste0("Hip: ", length(R.nocrawl.hip), " children do not crawl yet"))
+print(paste0("Hip: ", length(R.crawl.hip), " children can crawl but not walk"))
+print(paste0("Hip: ", length(R.walk.hip), " children can walk"))
+
 R.nocrawl.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 0 & tmp.wrist$walk == 0)]
 R.crawl.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 0)]
 R.walk.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 1)]
+print(paste0("Wrist: ", length(R.nocrawl.wrist), " children do not crawl yet"))
+print(paste0("Wrist: ", length(R.crawl.wrist), " children can crawl but not walk"))
+print(paste0("Wrist: ", length(R.walk.wrist), " children can walk"))
 
-# Estimates per milestone
+print(paste0("Hip * Wrist: ", length(intersect(R.nocrawl.hip, R.nocrawl.wrist)), " children do not crawl yet"))
+print(paste0("Hip * Wrist: ", length(intersect(R.crawl.hip, R.crawl.wrist)), " children can crawl but not walk"))
+print(paste0("Hip * Wrist: ", length(intersect(R.walk.hip, R.walk.wrist)), " children can walk"))
+
+
+# Estimates not walking vs. walking
+
 # Hip
-estimates.nocrawl.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.nocrawl.hip) 
-print(paste0("Hip: ", length(unique(unique(estimates.nocrawl.hip$id))), " children do not crawl yet"))
-estimates.crawl.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.crawl.hip) 
-print(paste0("Hip: ", length(unique(unique(estimates.crawl.hip$id))), " children can crawl but not walk"))
+estimates.notwalk.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% c(R.nocrawl.hip, R.crawl.hip)) 
 estimates.walk.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.walk.hip) 
-print(paste0("Hip: ", length(unique(unique(estimates.walk.hip$id))), " children can walk"))
-
 #Wrist
-estimates.nocrawl.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.nocrawl.wrist)
-print(paste0("Wrist: ", length(unique(unique(estimates.nocrawl.wrist$id))), " children do not crawl yet"))
-estimates.crawl.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.crawl.wrist) 
-print(paste0("Wrist: ", length(unique(unique(estimates.crawl.wrist$id))), " children can crawl but not walk"))
+estimates.notwalk.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% c(R.nocrawl.wrist, R.crawl.wrist))
 estimates.walk.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.walk.wrist) 
-print(paste0("Wrist: ", length(unique(unique(estimates.walk.wrist$id))), " children can walk"))
-
 #Both
-estimates.nocrawl.both <- merge(estimates.nocrawl.hip, estimates.nocrawl.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
-estimates.nocrawl.both$ENMO.both <- estimates.nocrawl.both$ENMO.x * estimates.nocrawl.both$ENMO.y
-estimates.nocrawl.both$ig_ENMO.both <- estimates.nocrawl.both$ig_ENMO.x * estimates.nocrawl.both$ig_ENMO.y
-estimates.nocrawl.both$MAD.both <- estimates.nocrawl.both$MAD.x * estimates.nocrawl.both$MAD.y
-estimates.nocrawl.both$ig_MAD.both <- estimates.nocrawl.both$ig_MAD.x * estimates.nocrawl.both$ig_MAD.y
-print(paste0("Hip * Wrist: ", length(unique(unique(estimates.nocrawl.both$id))), " children do not crawl yet"))
-
-estimates.crawl.both <- merge(estimates.crawl.hip, estimates.crawl.wrist, by = c("id", "date", "days", "weekday"))
 # Merge the estimate date.frames for hip and wrist, then calculate the metrics
-estimates.crawl.both$ENMO.both <- estimates.crawl.both$ENMO.x * estimates.crawl.both$ENMO.y
-estimates.crawl.both$ig_ENMO.both <- estimates.crawl.both$ig_ENMO.x * estimates.crawl.both$ig_ENMO.y
-estimates.crawl.both$MAD.both <- estimates.crawl.both$MAD.x * estimates.crawl.both$MAD.y
-estimates.crawl.both$ig_MAD.both <- estimates.crawl.both$ig_MAD.x * estimates.crawl.both$ig_MAD.y
-print(paste0("Hip * Wrist: ", length(unique(unique(estimates.crawl.both$id))), " children can crawl but not walk"))
-
+estimates.notwalk.both <- merge(estimates.notwalk.hip, estimates.notwalk.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
+estimates.notwalk.both$ENMO.both <- estimates.notwalk.both$ENMO.x * estimates.notwalk.both$ENMO.y
+estimates.notwalk.both$MAD.both <- estimates.notwalk.both$MAD.x * estimates.notwalk.both$MAD.y
 estimates.walk.both <- merge(estimates.walk.hip, estimates.walk.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
 estimates.walk.both$ENMO.both <- estimates.walk.both$ENMO.x * estimates.walk.both$ENMO.y
-estimates.walk.both$ig_ENMO.both <- estimates.walk.both$ig_ENMO.x * estimates.walk.both$ig_ENMO.y
 estimates.walk.both$MAD.both <- estimates.walk.both$MAD.x * estimates.walk.both$MAD.y
-estimates.walk.both$ig_MAD.both <- estimates.walk.both$ig_MAD.x * estimates.walk.both$ig_MAD.y
-print(paste0("Hip * Wrist: ", length(unique(unique(estimates.walk.both$id))), " children can walk"))
-
 
 rm(tmp, R.nocrawl.hip, R.crawl.hip, R.walk.hip, tmp.hip, R.nocrawl.wrist, R.crawl.wrist, R.walk.wrist, tmp.wrist, milestones, counter, crawl, walk, pp, pp.hip, pp.wrist, subj)
 ```
@@ -215,66 +206,130 @@ paste0("minimum time app: ", minimumtime, " min (", minimumtime/60, " h)")
 ```{r Step 3 Axivity, echo=FALSE}
 library(dplyr)
 desc.weekend.hip <- group_by(axivity.estimates.hip, weekday) %>% 
-  summarise_at(c("ENMO", "ig_ENMO", 
-                 "MAD", "ig_MAD"),
+  summarise_at(c("ENMO", "MAD"),
                list(median = median, IQR = quantile), na.rm = TRUE)
 desc.weekend.hip[c(2,4,7,9),]
 
 res_ENMO.hip <- wilcox.test(ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
 z_ENMO.hip <- qnorm(res_ENMO.hip$p.value/2)
 paste0("hip ENMO: Zscore =" ,z_ENMO.hip, ", p-value = ", res_ENMO.hip$p.value)
-res_ig_ENMO.hip <- wilcox.test(ig_ENMO ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_ig_ENMO.hip <- qnorm(res_ig_ENMO.hip$p.value/2)
-paste0("hip ENMO intensity gradient: Zscore =" ,z_ig_ENMO.hip, ", p-value = ", res_ig_ENMO.hip$p.value)
 res_MAD.hip <- wilcox.test(MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
 z_MAD.hip <- qnorm(res_MAD.hip$p.value/2)
 paste0("hip MAD: Zscore =" ,z_MAD.hip, ", p-value = ", res_MAD.hip$p.value)
-res_ig_MAD.hip <- wilcox.test(ig_MAD ~ weekday, data = axivity.estimates.hip, paired = FALSE)
-z_ig_MAD.hip <- qnorm(res_ig_MAD.hip$p.value/2)
-paste0("hip MAD intensity gradient: Zscore =" ,z_ig_MAD.hip, ", p-value = ", res_ig_MAD.hip$p.value)
 
 # Wrist
 desc.weekend.wrist <- group_by(axivity.estimates.wrist, weekday) %>% 
-  summarise_at(c("ENMO", "ig_ENMO", 
-                 "MAD", "ig_MAD"),
+  summarise_at(c("ENMO", "MAD"),
                list(median = median, IQR = quantile), na.rm = TRUE)
 desc.weekend.wrist[c(2,4,7,9),]
 
 res_ENMO.wrist <- wilcox.test(ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
 z_ENMO.wrist <- qnorm(res_ENMO.wrist$p.value/2)
 paste0("wrist ENMO: Zscore =" ,z_ENMO.wrist, ", p-value = ", res_ENMO.wrist$p.value)
-res_ig_ENMO.wrist <- wilcox.test(ig_ENMO ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_ig_ENMO.wrist <- qnorm(res_ig_ENMO.wrist$p.value/2)
-paste0("wrist ENMO intensity gradient: Zscore =" ,z_ig_ENMO.wrist, ", p-value = ", res_ig_ENMO.wrist$p.value)
 res_MAD.wrist <- wilcox.test(MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
 z_MAD.wrist <- qnorm(res_MAD.wrist$p.value/2)
 paste0("wrist MAD: Zscore =" ,z_MAD.wrist, ", p-value = ", res_MAD.wrist$p.value)
-res_ig_MAD.wrist <- wilcox.test(ig_MAD ~ weekday, data = axivity.estimates.wrist, paired = FALSE)
-z_ig_MAD.wrist <- qnorm(res_ig_MAD.wrist$p.value/2)
-paste0("wrist MAD intensity gradient: Zscore =" ,z_ig_MAD.wrist, ", p-value = ", res_ig_MAD.wrist$p.value)
 
 # Both
 desc.weekend.both <- group_by(axivity.estimates.both, weekday.x) %>% 
-  summarise_at(c("ENMO.both", "ENMOig.both", 
-                 "MAD.both", "MADig.both"),
+  summarise_at(c("ENMO.both", "MAD.both"),
                list(median = median, IQR = quantile), na.rm = TRUE)
 desc.weekend.both[c(2,4,7,9),]
 
 res_ENMO.both <- wilcox.test(ENMO.both ~ weekday.x, data = axivity.estimates.both, paired = FALSE)
 z_ENMO.both <- qnorm(res_ENMO.both$p.value/2)
 paste0("hip*wrist ENMO: Zscore =" ,z_ENMO.both, ", p-value = ", res_ENMO.both$p.value)
-res_ig_ENMO.both <- wilcox.test(ENMOig.both ~ weekday.x, data = axivity.estimates.both, paired = FALSE)
-z_ig_ENMO.both <- qnorm(res_ig_ENMO.both$p.value/2)
-paste0("hip*wrist ENMO intensity gradient: Zscore =" ,z_ig_ENMO.both, ", p-value = ", res_ig_ENMO.both$p.value)
 res_MAD.both <- wilcox.test(MAD.both ~ weekday.x, data = axivity.estimates.both, paired = FALSE)
 z_MAD.both <- qnorm(res_MAD.both$p.value/2)
 paste0("hip*wrist MAD: Zscore =" ,z_MAD.both, ", p-value = ", res_MAD.both$p.value)
-res_ig_MAD.both <- wilcox.test(MADig.both ~ weekday.x, data = axivity.estimates.both, paired = FALSE)
-z_ig_MAD.both <- qnorm(res_ig_MAD.both$p.value/2)
-paste0("hip*wrist ENMO intensity gradient: Zscore =" ,z_ig_MAD.both, ", p-value = ", res_ig_MAD.both$p.value)
 
-rm(desc.weekend.hip, res_ENMO.hip, z_ENMO.hip, z_ig_ENMO.hip, res_MAD.hip, z_MAD.hip, res_ig_MAD.hip, z_ig_MAD.hip, desc.weekend.wrist, res_ENMO.wrist, z_ENMO.wrist, res_ig_ENMO.wrist, z_ig_ENMO.wrist, res_MAD.wrist, z_MAD.wrist, res_ig_MAD.wrist, z_ig_MAD.wrist, desc.weekend.both, res_ENMO.both, z_ENMO.both, res_ig_ENMO.both, z_ig_ENMO.both, res_MAD.both, z_MAD.both, res_ig_MAD.both)
+rm(desc.weekend.hip, res_ENMO.hip, z_ENMO.hip, res_MAD.hip, z_MAD.hip, desc.weekend.wrist, res_ENMO.wrist, z_ENMO.wrist, res_MAD.wrist, z_MAD.wrist, desc.weekend.both, res_ENMO.both, z_ENMO.both, res_MAD.both, z_MAD.both)
 ```
+
+```{r Step 3 Axivity per milestone, echo=FALSE}
+library(dplyr)
+## Hip
+# Not walking
+desc.weekend.hip_notwalk <- group_by(estimates.notwalk.hip, weekday) %>% 
+  summarise_at(c("ENMO", "MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+desc.weekend.hip_notwalk[c(2,4,7,9),]
+
+res_ENMO.hip <- wilcox.test(ENMO ~ weekday, data = estimates.notwalk.hip, paired = FALSE)
+z_ENMO.hip <- qnorm(res_ENMO.hip$p.value/2)
+paste0("hip not walking ENMO: Zscore =" ,z_ENMO.hip, ", p-value = ", res_ENMO.hip$p.value)
+res_MAD.hip <- wilcox.test(MAD ~ weekday, data = estimates.notwalk.hip, paired = FALSE)
+z_MAD.hip <- qnorm(res_MAD.hip$p.value/2)
+paste0("hip not walking MAD: Zscore =" ,z_MAD.hip, ", p-value = ", res_MAD.hip$p.value)
+
+# Walking
+desc.weekend.hip_walk <- group_by(estimates.walk.hip, weekday) %>% 
+  summarise_at(c("ENMO", "MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+desc.weekend.hip_walk[c(2,4,7,9),]
+
+res_ENMO.hip <- wilcox.test(ENMO ~ weekday, data = estimates.walk.hip, paired = FALSE)
+z_ENMO.hip <- qnorm(res_ENMO.hip$p.value/2)
+paste0("hip walking ENMO: Zscore =" ,z_ENMO.hip, ", p-value = ", res_ENMO.hip$p.value)
+res_MAD.hip <- wilcox.test(MAD ~ weekday, data = estimates.walk.hip, paired = FALSE)
+z_MAD.hip <- qnorm(res_MAD.hip$p.value/2)
+paste0("hip walking MAD: Zscore =" ,z_MAD.hip, ", p-value = ", res_MAD.hip$p.value)
+
+## Wrist
+# Not walking
+desc.weekend.wrist_notwalk <- group_by(estimates.notwalk.wrist, weekday) %>% 
+  summarise_at(c("ENMO", "MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+desc.weekend.wrist_notwalk[c(2,4,7,9),]
+
+res_ENMO.wrist <- wilcox.test(ENMO ~ weekday, data = estimates.notwalk.wrist, paired = FALSE)
+z_ENMO.wrist <- qnorm(res_ENMO.wrist$p.value/2)
+paste0("wrist not walking ENMO: Zscore =" ,z_ENMO.wrist, ", p-value = ", res_ENMO.wrist$p.value)
+res_MAD.wrist <- wilcox.test(MAD ~ weekday, data = estimates.notwalk.wrist, paired = FALSE)
+z_MAD.wrist <- qnorm(res_MAD.wrist$p.value/2)
+paste0("wrist not walking MAD: Zscore =" ,z_MAD.wrist, ", p-value = ", res_MAD.wrist$p.value)
+
+# Walking
+desc.weekend.wrist_walk <- group_by(estimates.walk.wrist, weekday) %>% 
+  summarise_at(c("ENMO", "MAD"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+desc.weekend.wrist_walk[c(2,4,7,9),]
+
+res_ENMO.wrist <- wilcox.test(ENMO ~ weekday, data = estimates.walk.wrist, paired = FALSE)
+z_ENMO.wrist <- qnorm(res_ENMO.wrist$p.value/2)
+paste0("wrist walking ENMO: Zscore =" ,z_ENMO.wrist, ", p-value = ", res_ENMO.wrist$p.value)
+res_MAD.wrist <- wilcox.test(MAD ~ weekday, data = estimates.walk.wrist, paired = FALSE)
+z_MAD.wrist <- qnorm(res_MAD.wrist$p.value/2)
+paste0("wrist walking MAD: Zscore =" ,z_MAD.wrist, ", p-value = ", res_MAD.wrist$p.value)
+
+# Both
+desc.weekend.both_notwalk <- group_by(estimates.notwalk.both, weekday) %>% 
+  summarise_at(c("ENMO.both", "MAD.both"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+desc.weekend.both_notwalk[c(2,4,7,9),]
+
+res_ENMO.both <- wilcox.test(ENMO.both ~ weekday, data = estimates.notwalk.both, paired = FALSE)
+z_ENMO.both <- qnorm(res_ENMO.both$p.value/2)
+paste0("hip*wrist not walking ENMO: Zscore =" ,z_ENMO.both, ", p-value = ", res_ENMO.both$p.value)
+res_MAD.both <- wilcox.test(MAD.both ~ weekday, data = estimates.notwalk.both, paired = FALSE)
+z_MAD.both <- qnorm(res_MAD.both$p.value/2)
+paste0("hip*wrist not walking MAD: Zscore =" ,z_MAD.both, ", p-value = ", res_MAD.both$p.value)
+
+desc.weekend.both_walk <- group_by(estimates.walk.both, weekday) %>% 
+  summarise_at(c("ENMO.both", "MAD.both"),
+               list(median = median, IQR = quantile), na.rm = TRUE)
+desc.weekend.both_walk[c(2,4,7,9),]
+
+res_ENMO.both <- wilcox.test(ENMO.both ~ weekday, data = estimates.walk.both, paired = FALSE)
+z_ENMO.both <- qnorm(res_ENMO.both$p.value/2)
+paste0("hip*wrist walking ENMO: Zscore =" ,z_ENMO.both, ", p-value = ", res_ENMO.both$p.value)
+res_MAD.both <- wilcox.test(MAD.both ~ weekday, data = estimates.walk.both, paired = FALSE)
+z_MAD.both <- qnorm(res_MAD.both$p.value/2)
+paste0("hip*wrist walking MAD: Zscore =" ,z_MAD.both, ", p-value = ", res_MAD.both$p.value)
+
+rm(desc.weekend.hip, res_ENMO.hip, z_ENMO.hip, res_MAD.hip, z_MAD.hip, desc.weekend.wrist, res_ENMO.wrist, z_ENMO.wrist, res_MAD.wrist, z_MAD.wrist, desc.weekend.both, res_ENMO.both, z_ENMO.both, res_MAD.both, z_MAD.both)
+```
+
 # My Little Moves app
 
 ```{r Step 3 MLM app, echo=FALSE}
@@ -309,36 +364,66 @@ rm(res_PA, z_PA, res_SB, z_SB, res_sleep, z_sleep)
 # Hip
 day_day_ENMO.hip <- friedman.test(y = axivity.estimates.hip$ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
 paste0("Hip ENMO: Chi-square =" , day_day_ENMO.hip$statistic, ", p-value = ", day_day_ENMO.hip$p.value)
-day_day_ig_ENMO.hip <- friedman.test(y = axivity.estimates.hip$ig_ENMO, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
-paste0("Hip ENMO intensity gradient: Chi-square =" , day_day_ig_ENMO.hip$statistic, ", p-value = ", day_day_ig_ENMO.hip$p.value)
 day_day_MAD.hip <- friedman.test(y = axivity.estimates.hip$MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
 paste0("Hip MAD: Chi-square =" , day_day_MAD.hip$statistic, ", p-value = ", day_day_MAD.hip$p.value)
-day_day_ig_MAD.hip <- friedman.test(y = axivity.estimates.hip$ig_MAD, groups = axivity.estimates.hip$days, blocks = axivity.estimates.hip$id)
-paste0("Hip MAD intensity gradient: Chi-square =" , day_day_ig_MAD.hip$statistic, ", p-value = ", day_day_ig_MAD.hip$p.value)
 
 # Wrist
 day_day_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
 paste0("Wrist ENMO: Chi-square =" , day_day_ENMO.wrist$statistic, ", p-value = ", day_day_ENMO.wrist$p.value)
-day_day_ig_ENMO.wrist <- friedman.test(y = axivity.estimates.wrist$ig_ENMO, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
-paste0("Wrist ENMO intensity gradient: Chi-square =" , day_day_ig_ENMO.wrist$statistic, ", p-value = ", day_day_ig_ENMO.wrist$p.value)
 day_day_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
 paste0("Wrist MAD: Chi-square =" , day_day_MAD.wrist$statistic, ", p-value = ", day_day_MAD.wrist$p.value)
-day_day_ig_MAD.wrist <- friedman.test(y = axivity.estimates.wrist$ig_MAD, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
-paste0("Wrist MAD intensity gradient: Chi-square =" , day_day_ig_MAD.wrist$statistic, ", p-value = ", day_day_ig_MAD.wrist$p.value)
 
 # Both
-day_day_ENMO.both <- friedman.test(y = axivity.estimates.both$ENMO.both, groups = axivity.estimates.both$days.x, blocks = axivity.estimates.both$id)
+table(axivity.estimates.both$days.x) # find out where the dataset is unbalanced
+unbalanced_id <- setdiff(unique(axivity.estimates.both$id[which(axivity.estimates.both$days.y == "Monday")]), unique(axivity.estimates.both$id[which(axivity.estimates.both$days.y == "Tuesday")]))
+axivity.estimates.both <- axivity.estimates.both[-which(axivity.estimates.both$id == unbalanced_id),]
+
+day_day_ENMO.both <- friedman.test(y = axivity.estimates.both$ENMO.both, groups = axivity.estimates.both$days.y, blocks = axivity.estimates.both$id)
 paste0("Hip * Wrist ENMO: Chi-square =" , day_day_ENMO.both$statistic, ", p-value = ", day_day_ENMO.both$p.value)
-day_day_ig_ENMO.both <- friedman.test(y = axivity.estimates.both$ENMOig.both, groups = axivity.estimates.both$days.x, blocks = axivity.estimates.both$id)
-paste0("Hip * Wrist ENMO intensity gradient: Chi-square =" , day_day_ig_ENMO.both$statistic, ", p-value = ", day_day_ig_ENMO.both$p.value)
 day_day_MAD.both <- friedman.test(y = axivity.estimates.both$MAD.both, groups = axivity.estimates.both$days.x, blocks = axivity.estimates.both$id)
 paste0("Hip * Wrist MAD: Chi-square =" , day_day_MAD.both$statistic, ", p-value = ", day_day_MAD.both$p.value)
-day_day_ig_MAD.both <- friedman.test(y = axivity.estimates.both$MADig.both, groups = axivity.estimates.both$days.x, blocks = axivity.estimates.both$id)
-paste0("Hip * Wrist MAD intensity gradient: Chi-square =" , day_day_ig_MAD.both$statistic, ", p-value = ", day_day_ig_MAD.both$p.value)
 rm(day_day_ENMO.hip, day_day_ig_ENMO.hip, day_day_MAD.hip, day_day_ig_MAD.hip,
    day_day_ENMO.wrist, day_day_ig_ENMO.wrist, day_day_MAD.wrist, day_day_ig_MAD.wrist,
    day_day_ENMO.both, day_day_ig_ENMO.both, day_day_MAD.both, day_day_ig_MAD.both)
 ```
+
+```{r Step 4 Axivity per milestone, echo=FALSE}
+## Step 4: Day-to-day variability
+# Hip
+day_day_ENMO.hip_notwalk <- friedman.test(y = estimates.notwalk.hip$ENMO, groups = estimates.notwalk.hip$days, blocks = estimates.notwalk.hip$id)
+paste0("Hip not walking ENMO: Chi-square =" , day_day_ENMO.hip_notwalk$statistic, ", p-value = ", day_day_ENMO.hip_notwalk$p.value)
+day_day_MAD.hip_notwalk <- friedman.test(y = estimates.notwalk.hip$MAD, groups = estimates.notwalk.hip$days, blocks = estimates.notwalk.hip$id)
+paste0("Hip not walking MAD: Chi-square =" , day_day_MAD.hip_notwalk$statistic, ", p-value = ", day_day_MAD.hip_notwalk$p.value)
+
+day_day_ENMO.hip_walk <- friedman.test(y = estimates.walk.hip$ENMO, groups = estimates.walk.hip$days, blocks = estimates.walk.hip$id)
+paste0("Hip walking ENMO: Chi-square =" , day_day_ENMO.hip_walk$statistic, ", p-value = ", day_day_ENMO.hip_walk$p.value)
+day_day_MAD.hip_walk <- friedman.test(y = estimates.walk.hip$MAD, groups = estimates.walk.hip$days, blocks = estimates.walk.hip$id)
+paste0("Hip walking MAD: Chi-square =" , day_day_MAD.hip_walk$statistic, ", p-value = ", day_day_MAD.hip_walk$p.value)
+
+# Wrist
+day_day_ENMO.wrist_notwalk <- friedman.test(y = estimates.notwalk.wrist$ENMO, groups = estimates.notwalk.wrist$days, blocks = estimates.notwalk.wrist$id)
+paste0("Wrist not walking ENMO: Chi-square =" , day_day_ENMO.wrist_notwalk$statistic, ", p-value = ", day_day_ENMO.wrist_notwalk$p.value)
+day_day_MAD.wrist_notwalk <- friedman.test(y = estimates.notwalk.wrist$MAD, groups = estimates.notwalk.wrist$days, blocks = estimates.notwalk.wrist$id)
+paste0("Wrist not walking MAD: Chi-square =" , day_day_MAD.wrist_notwalk$statistic, ", p-value = ", day_day_MAD.wrist_notwalk$p.value)
+
+day_day_ENMO.wrist_walk <- friedman.test(y = estimates.walk.wrist$ENMO, groups = estimates.walk.wrist$days, blocks = estimates.walk.wrist$id)
+paste0("Wrist walking ENMO: Chi-square =" , day_day_ENMO.wrist_walk$statistic, ", p-value = ", day_day_ENMO.wrist_walk$p.value)
+day_day_MAD.wrist_walk <- friedman.test(y = estimates.walk.wrist$MAD, groups = estimates.walk.wrist$days, blocks = estimates.walk.wrist$id)
+paste0("Wrist walking MAD: Chi-square =" , day_day_MAD.wrist_walk$statistic, ", p-value = ", day_day_MAD.wrist_walk$p.value)
+
+# Both
+day_day_ENMO.both_notwalk <- friedman.test(y = estimates.notwalk.both$ENMO.both, groups = estimates.notwalk.both$days, blocks = estimates.notwalk.both$id)
+paste0("Hip * Wrist not walking ENMO: Chi-square =" , day_day_ENMO.both_notwalk$statistic, ", p-value = ", day_day_ENMO.both_notwalk$p.value)
+day_day_MAD.both_notwalk <- friedman.test(y = estimates.notwalk.both$MAD.both, groups = estimates.notwalk.both$days, blocks = estimates.notwalk.both$id)
+paste0("Hip * Wrist not walking MAD: Chi-square =" , day_day_MAD.both_notwalk$statistic, ", p-value = ", day_day_MAD.both_notwalk$p.value)
+
+day_day_ENMO.both_walk <- friedman.test(y = estimates.walk.both$ENMO.both, groups = estimates.walk.both$days, blocks = estimates.walk.both$id)
+paste0("Hip * Wrist walking ENMO: Chi-square =" , day_day_ENMO.both_walk$statistic, ", p-value = ", day_day_ENMO.both_walk$p.value)
+day_day_MAD.both_walk <- friedman.test(y = estimates.walk.both$MAD.both, groups = estimates.walk.both$days, blocks = estimates.walk.both$id)
+paste0("Hip * Wrist walking MAD: Chi-square =" , day_day_MAD.both_walk$statistic, ", p-value = ", day_day_MAD.both_walk$p.value)
+```
+
+
 # My Little Moves app
 
 ```{r Step 4 MLM app, echo=FALSE}
@@ -364,137 +449,69 @@ names(ratings_ENMO.hip_long) <- c("id", "days", "ENMO")
 ratings_ENMO.hip_long$ENMO <- as.numeric(ratings_ENMO.hip_long$ENMO)
 ratings_ENMO.hip  <- reshape(ratings_ENMO.hip_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.ENMO.hip <- irr::icc(ratings_ENMO.hip[,-1], model = "twoway", type = "consistency")
-ratings_ig_ENMO.hip_long <- as.data.frame(cbind(axivity.estimates.hip$id, axivity.estimates.hip$days, axivity.estimates.hip$ig_ENMO))
-names(ratings_ig_ENMO.hip_long) <- c("id", "days", "ENMO")
-ratings_ig_ENMO.hip_long$ENMO <- as.numeric(ratings_ig_ENMO.hip_long$ENMO)
-ratings_igENMO.hip  <- reshape(ratings_ig_ENMO.hip_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ig_ENMO.hip <- irr::icc(ratings_igENMO.hip[,-1], model = "twoway", type = "consistency")
 ratings_MAD.hip_long <- as.data.frame(cbind(axivity.estimates.hip$id, axivity.estimates.hip$days, axivity.estimates.hip$MAD))
 names(ratings_MAD.hip_long) <- c("id", "days", "MAD")
 ratings_MAD.hip_long$MAD <- as.numeric(ratings_MAD.hip_long$MAD)
 ratings_MAD.hip  <- reshape(ratings_MAD.hip_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.MAD.hip <- irr::icc(ratings_MAD.hip[,-1], model = "twoway", type = "consistency")
-ratings_ig_MAD.hip_long <- as.data.frame(cbind(axivity.estimates.hip$id, axivity.estimates.hip$days, axivity.estimates.hip$ig_MAD))
-names(ratings_ig_MAD.hip_long) <- c("id", "days", "MAD")
-ratings_ig_MAD.hip_long$MAD <- as.numeric(ratings_ig_MAD.hip_long$MAD)
-ratings_ig_MAD.hip  <- reshape(ratings_ig_MAD.hip_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ig_MAD.hip <- irr::icc(ratings_ig_MAD.hip[,-1], model = "twoway", type = "consistency")
 
 paste0("Hip ENMO: ICC =" , ICC.ENMO.hip$value, "[", ICC.ENMO.hip$lbound, ";", ICC.ENMO.hip$ubound, "]")
-paste0("Hip ENMO intensity gradient: ICC =" , ICC.ig_ENMO.hip$value, "[", ICC.ig_ENMO.hip$lbound, ";", ICC.ig_ENMO.hip$ubound, "]")
 paste0("Hip MAD: ICC =" , ICC.MAD.hip$value, "[", ICC.MAD.hip$lbound, ";", ICC.MAD.hip$ubound, "]")
-paste0("Hip MAD intensity gradient: ICC =" , ICC.ig_MAD.hip$value, "[", ICC.ig_MAD.hip$lbound, ";", ICC.ig_MAD.hip$ubound, "]")
 
+# Wrist
 ratings.wrist  <- reshape(axivity.estimates.wrist, idvar = "days", timevar = "id", direction = "wide")
 ratings_ENMO.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$ENMO))
 names(ratings_ENMO.wrist_long) <- c("id", "days", "ENMO")
 ratings_ENMO.wrist_long$ENMO <- as.numeric(ratings_ENMO.wrist_long$ENMO)
 ratings_ENMO.wrist  <- reshape(ratings_ENMO.wrist_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.ENMO.wrist <- irr::icc(ratings_ENMO.wrist[,-1], model = "twoway", type = "consistency")
-ratings_ig_ENMO.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$ig_ENMO))
-names(ratings_ig_ENMO.wrist_long) <- c("id", "days", "ENMO")
-ratings_ig_ENMO.wrist_long$ENMO <- as.numeric(ratings_ig_ENMO.wrist_long$ENMO)
-ratings_igENMO.wrist  <- reshape(ratings_ig_ENMO.wrist_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ig_ENMO.wrist <- irr::icc(ratings_igENMO.wrist[,-1], model = "twoway", type = "consistency")
 ratings_MAD.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$MAD))
 names(ratings_MAD.wrist_long) <- c("id", "days", "MAD")
 ratings_MAD.wrist_long$MAD <- as.numeric(ratings_MAD.wrist_long$MAD)
 ratings_MAD.wrist  <- reshape(ratings_MAD.wrist_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.MAD.wrist <- irr::icc(ratings_MAD.wrist[,-1], model = "twoway", type = "consistency")
-ratings_ig_MAD.wrist_long <- as.data.frame(cbind(axivity.estimates.wrist$id, axivity.estimates.wrist$days, axivity.estimates.wrist$ig_MAD))
-names(ratings_ig_MAD.wrist_long) <- c("id", "days", "MAD")
-ratings_ig_MAD.wrist_long$MAD <- as.numeric(ratings_ig_MAD.wrist_long$MAD)
-ratings_ig_MAD.wrist  <- reshape(ratings_ig_MAD.wrist_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ig_MAD.wrist <- irr::icc(ratings_ig_MAD.wrist[,-1], model = "twoway", type = "consistency")
 
 paste0("Wrist ENMO: ICC =" , ICC.ENMO.wrist$value, "[", ICC.ENMO.wrist$lbound, ";", ICC.ENMO.wrist$ubound, "]")
-paste0("Wrist ENMO intensity gradient: ICC =" , ICC.ig_ENMO.wrist$value, "[", ICC.ig_ENMO.wrist$lbound, ";", ICC.ig_ENMO.wrist$ubound, "]")
 paste0("Wrist MAD: ICC =" , ICC.MAD.wrist$value, "[", ICC.MAD.wrist$lbound, ";", ICC.MAD.wrist$ubound, "]")
-paste0("Wrist MAD intensity gradient: ICC =" , ICC.ig_MAD.wrist$value, "[", ICC.ig_MAD.wrist$lbound, ";", ICC.ig_MAD.wrist$ubound, "]")
 
+#Both
 ratings.both  <- reshape(axivity.estimates.both, idvar = "days.x", timevar = "id", direction = "wide")
 ratings_ENMO.both_long <- as.data.frame(cbind(axivity.estimates.both$id, axivity.estimates.both$days.x, axivity.estimates.both$ENMO.both))
 names(ratings_ENMO.both_long) <- c("id", "days", "ENMO")
 ratings_ENMO.both_long$ENMO <- as.numeric(ratings_ENMO.both_long$ENMO)
 ratings_ENMO.both  <- reshape(ratings_ENMO.both_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.ENMO.both <- irr::icc(ratings_ENMO.both[,-1], model = "twoway", type = "consistency")
-ratings_ig_ENMO.both_long <- as.data.frame(cbind(axivity.estimates.both$id, axivity.estimates.both$days.x, axivity.estimates.both$ENMOig.both))
-names(ratings_ig_ENMO.both_long) <- c("id", "days", "ENMO")
-ratings_ig_ENMO.both_long$ENMO <- as.numeric(ratings_ig_ENMO.both_long$ENMO)
-ratings_igENMO.both  <- reshape(ratings_ig_ENMO.both_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ig_ENMO.both <- irr::icc(ratings_igENMO.both[,-1], model = "twoway", type = "consistency")
 ratings_MAD.both_long <- as.data.frame(cbind(axivity.estimates.both$id, axivity.estimates.both$days.x, axivity.estimates.both$MAD.both))
 names(ratings_MAD.both_long) <- c("id", "days", "MAD")
 ratings_MAD.both_long$MAD <- as.numeric(ratings_MAD.both_long$MAD)
 ratings_MAD.both  <- reshape(ratings_MAD.both_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.MAD.both <- irr::icc(ratings_MAD.both[,-1], model = "twoway", type = "consistency")
-ratings_ig_MAD.both_long <- as.data.frame(cbind(axivity.estimates.both$id, axivity.estimates.both$days.x, axivity.estimates.both$MADig.both))
-names(ratings_ig_MAD.both_long) <- c("id", "days", "MAD")
-ratings_ig_MAD.both_long$MAD <- as.numeric(ratings_ig_MAD.both_long$MAD)
-ratings_ig_MAD.both  <- reshape(ratings_ig_MAD.both_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ig_MAD.both <- irr::icc(ratings_ig_MAD.both[,-1], model = "twoway", type = "consistency")
 
 paste0("Hip * Wrist ENMO: ICC =" , ICC.ENMO.both$value, "[", ICC.ENMO.both$lbound, ";", ICC.ENMO.both$ubound, "]")
-paste0("Hip * Wrist ENMO intensity gradient: ICC =" , ICC.ig_ENMO.both$value, "[", ICC.ig_ENMO.both$lbound, ";", ICC.ig_ENMO.both$ubound, "]")
 paste0("Hip * Wrist MAD: ICC =" , ICC.MAD.both$value, "[", ICC.MAD.both$lbound, ";", ICC.MAD.both$ubound, "]")
-paste0("Hip * Wrist MAD intensity gradient: ICC =" , ICC.ig_MAD.both$value, "[", ICC.ig_MAD.both$lbound, ";", ICC.ig_MAD.both$ubound, "]")
 
-rm(ratings_ENMO.hip, ratings_ENMO.hip_long, ratings_ENMO.wrist, ratings_ENMO.wrist_long, ratings_ENMO.both, ratings_ENMO.both_long, ratings_igENMO.hip, ratings_ig_ENMO.hip_long, ratings_igENMO.wrist, ratings_ig_ENMO.wrist_long, ratings_igENMO.both, ratings_ig_ENMO.both_long, ratings_MAD.hip, ratings_MAD.hip_long, ratings_MAD.wrist, ratings_MAD.wrist_long, ratings_MAD.both, ratings_MAD.both_long, ratings_ig_MAD.hip, ratings_ig_MAD.hip_long, ratings_ig_MAD.wrist, ratings_ig_MAD.wrist_long, ratings_ig_MAD.both, ratings_ig_MAD.both_long, ratings.hip, ratings.wrist, ratings.both)
+rm(ratings_ENMO.hip, ratings_ENMO.hip_long, ratings_ENMO.wrist, ratings_ENMO.wrist_long, ratings_ENMO.both, ratings_ENMO.both_long, ratings_MAD.hip, ratings_MAD.hip_long, ratings_MAD.wrist, ratings_MAD.wrist_long, ratings_MAD.both, ratings_MAD.both_long, ratings.hip, ratings.wrist, ratings.both)
 ```
 
 ```{r Step 5 Axivity hip milestones groups, echo=FALSE}
-ratings.hip.nocrawl  <- reshape(estimates.nocrawl.hip, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.hip.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.hip$id, estimates.nocrawl.hip$days, estimates.nocrawl.hip$ENMO))
-names(ratings_ENMO.hip.nocrawl_long) <- c("id", "days", "ENMO")
-ratings_ENMO.hip.nocrawl_long$ENMO <- as.numeric(ratings_ENMO.hip.nocrawl_long$ENMO)
-ratings_ENMO.hip.nocrawl  <- reshape(ratings_ENMO.hip.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.hip.nocrawl <- irr::icc(ratings_ENMO.hip.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO no crawling: ICC =" , ICC.ENMO.hip.nocrawl$value, "[", ICC.ENMO.hip.nocrawl$lbound, ";", ICC.ENMO.hip.nocrawl$ubound, "]")
-ratings_igENMO.hip.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.hip$id, estimates.nocrawl.hip$days, estimates.nocrawl.hip$ig_ENMO))
-names(ratings_igENMO.hip.nocrawl_long) <- c("id", "days", "ENMO")
-ratings_igENMO.hip.nocrawl_long$ENMO <- as.numeric(ratings_igENMO.hip.nocrawl_long$ENMO)
-ratings_igENMO.hip.nocrawl  <- reshape(ratings_igENMO.hip.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.hip.nocrawl <- irr::icc(ratings_igENMO.hip.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO intensity gradient no crawling: ICC =" , ICC.igENMO.hip.nocrawl$value, "[", ICC.igENMO.hip.nocrawl$lbound, ";", ICC.igENMO.hip.nocrawl$ubound, "]")
-ratings_MAD.hip.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.hip$id, estimates.nocrawl.hip$days, estimates.nocrawl.hip$MAD))
-names(ratings_MAD.hip.nocrawl_long) <- c("id", "days", "MAD")
-ratings_MAD.hip.nocrawl_long$MAD <- as.numeric(ratings_MAD.hip.nocrawl_long$MAD)
-ratings_MAD.hip.nocrawl  <- reshape(ratings_MAD.hip.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.hip.nocrawl <- irr::icc(ratings_MAD.hip.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD intensity gradient no crawling: ICC =" , ICC.MAD.hip.nocrawl$value, "[", ICC.MAD.hip.nocrawl$lbound, ";", ICC.MAD.hip.nocrawl$ubound, "]")
-ratings_igMAD.hip.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.hip$id, estimates.nocrawl.hip$days, estimates.nocrawl.hip$ig_MAD))
-names(ratings_igMAD.hip.nocrawl_long) <- c("id", "days", "MAD")
-ratings_igMAD.hip.nocrawl_long$MAD <- as.numeric(ratings_igMAD.hip.nocrawl_long$MAD)
-ratings_igMAD.hip.nocrawl  <- reshape(ratings_igMAD.hip.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.hip.nocrawl <- irr::icc(ratings_igMAD.hip.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD intensity gradient no crawling: ICC =" , ICC.igMAD.hip.nocrawl$value, "[", ICC.igMAD.hip.nocrawl$lbound, ";", ICC.igMAD.hip.nocrawl$ubound, "]")
+# Hip
+# Not walking
+ratings.hip.notwalk  <- reshape(estimates.notwalk.hip, idvar = "days", timevar = "id", direction = "wide")
+ratings_ENMO.hip.notwalk_long <- as.data.frame(cbind(estimates.notwalk.hip$id, estimates.notwalk.hip$days, estimates.notwalk.hip$ENMO))
+names(ratings_ENMO.hip.notwalk_long) <- c("id", "days", "ENMO")
+ratings_ENMO.hip.notwalk_long$ENMO <- as.numeric(ratings_ENMO.hip.notwalk_long$ENMO)
+ratings_ENMO.hip.notwalk  <- reshape(ratings_ENMO.hip.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.ENMO.hip.notwalk <- irr::icc(ratings_ENMO.hip.notwalk[,-1], model = "twoway", type = "consistency")
+paste0("Hip ENMO not walking: ICC =" , ICC.ENMO.hip.notwalk$value, "[", ICC.ENMO.hip.notwalk$lbound, ";", ICC.ENMO.hip.notwalk$ubound, "]")
 
-ratings.hip.crawl  <- reshape(estimates.crawl.hip, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.hip.crawl_long <- as.data.frame(cbind(estimates.crawl.hip$id, estimates.crawl.hip$days, estimates.crawl.hip$ENMO))
-names(ratings_ENMO.hip.crawl_long) <- c("id", "days", "ENMO")
-ratings_ENMO.hip.crawl_long$ENMO <- as.numeric(ratings_ENMO.hip.crawl_long$ENMO)
-ratings_ENMO.hip.crawl  <- reshape(ratings_ENMO.hip.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.hip.crawl <- irr::icc(ratings_ENMO.hip.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO crawling: ICC =" , ICC.ENMO.hip.crawl$value, "[", ICC.ENMO.hip.crawl$lbound, ";", ICC.ENMO.hip.crawl$ubound, "]")
-ratings_igENMO.hip.crawl_long <- as.data.frame(cbind(estimates.crawl.hip$id, estimates.crawl.hip$days, estimates.crawl.hip$ig_ENMO))
-names(ratings_igENMO.hip.crawl_long) <- c("id", "days", "ENMO")
-ratings_igENMO.hip.crawl_long$ENMO <- as.numeric(ratings_igENMO.hip.crawl_long$ENMO)
-ratings_igENMO.hip.crawl  <- reshape(ratings_igENMO.hip.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.hip.crawl <- irr::icc(ratings_igENMO.hip.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO intensity gradient crawling: ICC =" , ICC.igENMO.hip.crawl$value, "[", ICC.igENMO.hip.crawl$lbound, ";", ICC.igENMO.hip.crawl$ubound, "]")
-ratings_MAD.hip.crawl_long <- as.data.frame(cbind(estimates.crawl.hip$id, estimates.crawl.hip$days, estimates.crawl.hip$MAD))
-names(ratings_MAD.hip.crawl_long) <- c("id", "days", "MAD")
-ratings_MAD.hip.crawl_long$MAD <- as.numeric(ratings_MAD.hip.crawl_long$MAD)
-ratings_MAD.hip.crawl  <- reshape(ratings_MAD.hip.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.hip.crawl <- irr::icc(ratings_MAD.hip.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD crawling: ICC =" , ICC.MAD.hip.crawl$value, "[", ICC.MAD.hip.crawl$lbound, ";", ICC.MAD.hip.crawl$ubound, "]")
-ratings_igMAD.hip.crawl_long <- as.data.frame(cbind(estimates.crawl.hip$id, estimates.crawl.hip$days, estimates.crawl.hip$ig_MAD))
-names(ratings_igMAD.hip.crawl_long) <- c("id", "days", "MAD")
-ratings_igMAD.hip.crawl_long$MAD <- as.numeric(ratings_igMAD.hip.crawl_long$MAD)
-ratings_igMAD.hip.crawl  <- reshape(ratings_igMAD.hip.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.hip.crawl <- irr::icc(ratings_igMAD.hip.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD intensity gradient crawling: ICC =" , ICC.igMAD.hip.crawl$value, "[", ICC.igMAD.hip.crawl$lbound, ";", ICC.igMAD.hip.crawl$ubound, "]")
+ratings_MAD.hip.notwalk_long <- as.data.frame(cbind(estimates.notwalk.hip$id, estimates.notwalk.hip$days, estimates.notwalk.hip$MAD))
+names(ratings_MAD.hip.notwalk_long) <- c("id", "days", "MAD")
+ratings_MAD.hip.notwalk_long$MAD <- as.numeric(ratings_MAD.hip.notwalk_long$MAD)
+ratings_MAD.hip.notwalk  <- reshape(ratings_MAD.hip.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.MAD.hip.notwalk <- irr::icc(ratings_MAD.hip.notwalk[,-1], model = "twoway", type = "consistency")
+paste0("Hip MAD not walking: ICC =" , ICC.MAD.hip.notwalk$value, "[", ICC.MAD.hip.notwalk$lbound, ";", ICC.MAD.hip.notwalk$ubound, "]")
 
+# Walking
 ratings.hip.walk  <- reshape(estimates.walk.hip, idvar = "days", timevar = "id", direction = "wide")
 ratings_ENMO.hip.walk_long <- as.data.frame(cbind(estimates.walk.hip$id, estimates.walk.hip$days, estimates.walk.hip$ENMO))
 names(ratings_ENMO.hip.walk_long) <- c("id", "days", "ENMO")
@@ -502,191 +519,81 @@ ratings_ENMO.hip.walk_long$ENMO <- as.numeric(ratings_ENMO.hip.walk_long$ENMO)
 ratings_ENMO.hip.walk  <- reshape(ratings_ENMO.hip.walk_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.ENMO.hip.walk <- irr::icc(ratings_ENMO.hip.walk[,-1], model = "twoway", type = "consistency")
 paste0("Hip ENMO walking: ICC =" , ICC.ENMO.hip.walk$value, "[", ICC.ENMO.hip.walk$lbound, ";", ICC.ENMO.hip.walk$ubound, "]")
-ratings_igENMO.hip.walk_long <- as.data.frame(cbind(estimates.walk.hip$id, estimates.walk.hip$days, estimates.walk.hip$ig_ENMO))
-names(ratings_igENMO.hip.walk_long) <- c("id", "days", "ENMO")
-ratings_igENMO.hip.walk_long$ENMO <- as.numeric(ratings_igENMO.hip.walk_long$ENMO)
-ratings_igENMO.hip.walk  <- reshape(ratings_igENMO.hip.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.hip.walk <- irr::icc(ratings_igENMO.hip.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO intensity gradient walking: ICC =" , ICC.igENMO.hip.walk$value, "[", ICC.igENMO.hip.walk$lbound, ";", ICC.igENMO.hip.walk$ubound, "]")
+
 ratings_MAD.hip.walk_long <- as.data.frame(cbind(estimates.walk.hip$id, estimates.walk.hip$days, estimates.walk.hip$MAD))
 names(ratings_MAD.hip.walk_long) <- c("id", "days", "MAD")
 ratings_MAD.hip.walk_long$MAD <- as.numeric(ratings_MAD.hip.walk_long$MAD)
 ratings_MAD.hip.walk  <- reshape(ratings_MAD.hip.walk_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.MAD.hip.walk <- irr::icc(ratings_MAD.hip.walk[,-1], model = "twoway", type = "consistency")
 paste0("Hip MAD walking: ICC =" , ICC.MAD.hip.walk$value, "[", ICC.MAD.hip.walk$lbound, ";", ICC.MAD.hip.walk$ubound, "]")
-ratings_igMAD.hip.walk_long <- as.data.frame(cbind(estimates.walk.hip$id, estimates.walk.hip$days, estimates.walk.hip$ig_MAD))
-names(ratings_igMAD.hip.walk_long) <- c("id", "days", "MAD")
-ratings_igMAD.hip.walk_long$MAD <- as.numeric(ratings_igMAD.hip.walk_long$MAD)
-ratings_igMAD.hip.walk  <- reshape(ratings_igMAD.hip.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.hip.walk <- irr::icc(ratings_igMAD.hip.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD intensity gradient walking: ICC =" , ICC.igMAD.hip.walk$value, "[", ICC.igMAD.hip.walk$lbound, ";", ICC.igMAD.hip.walk$ubound, "]")
 
-rm(ratings_ENMO.hip.walk, ratings_ENMO.hip.walk_long, ratings_ENMO.hip.nocrawl, ratings_ENMO.hip.nocrawl_long, ratings_ENMO.hip.crawl, ratings_ENMO.hip.crawl_long, ratings_igENMO.hip.walk, ratings_igENMO.hip.walk_long, ratings_igENMO.hip.nocrawl, ratings_igENMO.hip.nocrawl_long, ratings_igENMO.hip.crawl, ratings_igENMO.hip.crawl_long, ratings_MAD.hip.walk, ratings_MAD.hip.walk_long, ratings_MAD.hip.nocrawl, ratings_MAD.hip.nocrawl_long, ratings_MAD.hip.crawl, ratings_MAD.hip.crawl_long, ratings_igMAD.hip.walk, ratings_igMAD.hip.walk_long, ratings_igMAD.hip.nocrawl, ratings_igMAD.hip.nocrawl_long, ratings_igMAD.hip.crawl, ratings_igMAD.hip.crawl_long)
-```
+# Wrist
+# Not walking
+ratings.wrist.notwalk  <- reshape(estimates.notwalk.wrist, idvar = "days", timevar = "id", direction = "wide")
+ratings_ENMO.wrist.notwalk_long <- as.data.frame(cbind(estimates.notwalk.wrist$id, estimates.notwalk.wrist$days, estimates.notwalk.wrist$ENMO))
+names(ratings_ENMO.wrist.notwalk_long) <- c("id", "days", "ENMO")
+ratings_ENMO.wrist.notwalk_long$ENMO <- as.numeric(ratings_ENMO.wrist.notwalk_long$ENMO)
+ratings_ENMO.wrist.notwalk  <- reshape(ratings_ENMO.wrist.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.ENMO.wrist.notwalk <- irr::icc(ratings_ENMO.wrist.notwalk[,-1], model = "twoway", type = "consistency")
+paste0("Wrist ENMO not walking: ICC =" , ICC.ENMO.wrist.notwalk$value, "[", ICC.ENMO.wrist.notwalk$lbound, ";", ICC.ENMO.wrist.notwalk$ubound, "]")
 
-```{r Step 5 Axivity wrist milestones groups, echo=FALSE}
-ratings.wrist.nocrawl  <- reshape(estimates.nocrawl.wrist, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.wrist.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.wrist$id, estimates.nocrawl.wrist$days, estimates.nocrawl.wrist$ENMO))
-names(ratings_ENMO.wrist.nocrawl_long) <- c("id", "days", "ENMO")
-ratings_ENMO.wrist.nocrawl_long$ENMO <- as.numeric(ratings_ENMO.wrist.nocrawl_long$ENMO)
-ratings_ENMO.wrist.nocrawl  <- reshape(ratings_ENMO.wrist.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.wrist.nocrawl <- irr::icc(ratings_ENMO.wrist.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist ENMO no crawling: ICC =" , ICC.ENMO.wrist.nocrawl$value, "[", ICC.ENMO.wrist.nocrawl$lbound, ";", ICC.ENMO.wrist.nocrawl$ubound, "]")
-ratings_igENMO.wrist.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.wrist$id, estimates.nocrawl.wrist$days, estimates.nocrawl.wrist$ig_ENMO))
-names(ratings_igENMO.wrist.nocrawl_long) <- c("id", "days", "ENMO")
-ratings_igENMO.wrist.nocrawl_long$ENMO <- as.numeric(ratings_igENMO.wrist.nocrawl_long$ENMO)
-ratings_igENMO.wrist.nocrawl  <- reshape(ratings_igENMO.wrist.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.wrist.nocrawl <- irr::icc(ratings_igENMO.wrist.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist ENMO intensity gradient no crawling: ICC =" , ICC.igENMO.wrist.nocrawl$value, "[", ICC.igENMO.wrist.nocrawl$lbound, ";", ICC.igENMO.wrist.nocrawl$ubound, "]")
-ratings_MAD.wrist.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.wrist$id, estimates.nocrawl.wrist$days, estimates.nocrawl.wrist$MAD))
-names(ratings_MAD.wrist.nocrawl_long) <- c("id", "days", "MAD")
-ratings_MAD.wrist.nocrawl_long$MAD <- as.numeric(ratings_MAD.wrist.nocrawl_long$MAD)
-ratings_MAD.wrist.nocrawl  <- reshape(ratings_MAD.wrist.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.wrist.nocrawl <- irr::icc(ratings_MAD.wrist.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist MAD intensity gradient no crawling: ICC =" , ICC.MAD.wrist.nocrawl$value, "[", ICC.MAD.wrist.nocrawl$lbound, ";", ICC.MAD.wrist.nocrawl$ubound, "]")
-ratings_igMAD.wrist.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.wrist$id, estimates.nocrawl.wrist$days, estimates.nocrawl.wrist$ig_MAD))
-names(ratings_igMAD.wrist.nocrawl_long) <- c("id", "days", "MAD")
-ratings_igMAD.wrist.nocrawl_long$MAD <- as.numeric(ratings_igMAD.wrist.nocrawl_long$MAD)
-ratings_igMAD.wrist.nocrawl  <- reshape(ratings_igMAD.wrist.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.wrist.nocrawl <- irr::icc(ratings_igMAD.wrist.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist MAD intensity gradient no crawling: ICC =" , ICC.igMAD.wrist.nocrawl$value, "[", ICC.igMAD.wrist.nocrawl$lbound, ";", ICC.igMAD.wrist.nocrawl$ubound, "]")
+ratings_MAD.wrist.notwalk_long <- as.data.frame(cbind(estimates.notwalk.wrist$id, estimates.notwalk.wrist$days, estimates.notwalk.wrist$MAD))
+names(ratings_MAD.wrist.notwalk_long) <- c("id", "days", "MAD")
+ratings_MAD.wrist.notwalk_long$MAD <- as.numeric(ratings_MAD.wrist.notwalk_long$MAD)
+ratings_MAD.wrist.notwalk  <- reshape(ratings_MAD.wrist.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.MAD.wrist.notwalk <- irr::icc(ratings_MAD.wrist.notwalk[,-1], model = "twoway", type = "consistency")
+paste0("Wrist MAD not walking: ICC =" , ICC.MAD.wrist.notwalk$value, "[", ICC.MAD.wrist.notwalk$lbound, ";", ICC.MAD.wrist.notwalk$ubound, "]")
 
-ratings.wrist.crawl  <- reshape(estimates.crawl.wrist, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.wrist.crawl_long <- as.data.frame(cbind(estimates.crawl.wrist$id, estimates.crawl.wrist$days, estimates.crawl.wrist$ENMO))
-names(ratings_ENMO.wrist.crawl_long) <- c("id", "days", "ENMO")
-ratings_ENMO.wrist.crawl_long$ENMO <- as.numeric(ratings_ENMO.wrist.crawl_long$ENMO)
-ratings_ENMO.wrist.crawl  <- reshape(ratings_ENMO.wrist.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.wrist.crawl <- irr::icc(ratings_ENMO.wrist.crawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist ENMO crawling: ICC =" , ICC.ENMO.wrist.crawl$value, "[", ICC.ENMO.wrist.crawl$lbound, ";", ICC.ENMO.wrist.crawl$ubound, "]")
-ratings_igENMO.wrist.crawl_long <- as.data.frame(cbind(estimates.crawl.wrist$id, estimates.crawl.wrist$days, estimates.crawl.wrist$ig_ENMO))
-names(ratings_igENMO.wrist.crawl_long) <- c("id", "days", "ENMO")
-ratings_igENMO.wrist.crawl_long$ENMO <- as.numeric(ratings_igENMO.wrist.crawl_long$ENMO)
-ratings_igENMO.wrist.crawl  <- reshape(ratings_igENMO.wrist.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.wrist.crawl <- irr::icc(ratings_igENMO.wrist.crawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist ENMO intensity gradient crawling: ICC =" , ICC.igENMO.wrist.crawl$value, "[", ICC.igENMO.wrist.crawl$lbound, ";", ICC.igENMO.wrist.crawl$ubound, "]")
-ratings_MAD.wrist.crawl_long <- as.data.frame(cbind(estimates.crawl.wrist$id, estimates.crawl.wrist$days, estimates.crawl.wrist$MAD))
-names(ratings_MAD.wrist.crawl_long) <- c("id", "days", "MAD")
-ratings_MAD.wrist.crawl_long$MAD <- as.numeric(ratings_MAD.wrist.crawl_long$MAD)
-ratings_MAD.wrist.crawl  <- reshape(ratings_MAD.wrist.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.wrist.crawl <- irr::icc(ratings_MAD.wrist.crawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist MAD crawling: ICC =" , ICC.MAD.wrist.crawl$value, "[", ICC.MAD.wrist.crawl$lbound, ";", ICC.MAD.wrist.crawl$ubound, "]")
-ratings_igMAD.wrist.crawl_long <- as.data.frame(cbind(estimates.crawl.wrist$id, estimates.crawl.wrist$days, estimates.crawl.wrist$ig_MAD))
-names(ratings_igMAD.wrist.crawl_long) <- c("id", "days", "MAD")
-ratings_igMAD.wrist.crawl_long$MAD <- as.numeric(ratings_igMAD.wrist.crawl_long$MAD)
-ratings_igMAD.wrist.crawl  <- reshape(ratings_igMAD.wrist.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.wrist.crawl <- irr::icc(ratings_igMAD.wrist.crawl[,-1], model = "twoway", type = "consistency")
-paste0("wrist MAD intensity gradient crawling: ICC =" , ICC.igMAD.wrist.crawl$value, "[", ICC.igMAD.wrist.crawl$lbound, ";", ICC.igMAD.wrist.crawl$ubound, "]")
-
+# Walking
 ratings.wrist.walk  <- reshape(estimates.walk.wrist, idvar = "days", timevar = "id", direction = "wide")
 ratings_ENMO.wrist.walk_long <- as.data.frame(cbind(estimates.walk.wrist$id, estimates.walk.wrist$days, estimates.walk.wrist$ENMO))
 names(ratings_ENMO.wrist.walk_long) <- c("id", "days", "ENMO")
 ratings_ENMO.wrist.walk_long$ENMO <- as.numeric(ratings_ENMO.wrist.walk_long$ENMO)
 ratings_ENMO.wrist.walk  <- reshape(ratings_ENMO.wrist.walk_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.ENMO.wrist.walk <- irr::icc(ratings_ENMO.wrist.walk[,-1], model = "twoway", type = "consistency")
-paste0("wrist ENMO walking: ICC =" , ICC.ENMO.wrist.walk$value, "[", ICC.ENMO.wrist.walk$lbound, ";", ICC.ENMO.wrist.walk$ubound, "]")
-ratings_igENMO.wrist.walk_long <- as.data.frame(cbind(estimates.walk.wrist$id, estimates.walk.wrist$days, estimates.walk.wrist$ig_ENMO))
-names(ratings_igENMO.wrist.walk_long) <- c("id", "days", "ENMO")
-ratings_igENMO.wrist.walk_long$ENMO <- as.numeric(ratings_igENMO.wrist.walk_long$ENMO)
-ratings_igENMO.wrist.walk  <- reshape(ratings_igENMO.wrist.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.wrist.walk <- irr::icc(ratings_igENMO.wrist.walk[,-1], model = "twoway", type = "consistency")
-paste0("wrist ENMO intensity gradient walking: ICC =" , ICC.igENMO.wrist.walk$value, "[", ICC.igENMO.wrist.walk$lbound, ";", ICC.igENMO.wrist.walk$ubound, "]")
+paste0("Wrist ENMO walking: ICC =" , ICC.ENMO.wrist.walk$value, "[", ICC.ENMO.wrist.walk$lbound, ";", ICC.ENMO.wrist.walk$ubound, "]")
+
 ratings_MAD.wrist.walk_long <- as.data.frame(cbind(estimates.walk.wrist$id, estimates.walk.wrist$days, estimates.walk.wrist$MAD))
 names(ratings_MAD.wrist.walk_long) <- c("id", "days", "MAD")
 ratings_MAD.wrist.walk_long$MAD <- as.numeric(ratings_MAD.wrist.walk_long$MAD)
 ratings_MAD.wrist.walk  <- reshape(ratings_MAD.wrist.walk_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.MAD.wrist.walk <- irr::icc(ratings_MAD.wrist.walk[,-1], model = "twoway", type = "consistency")
-paste0("wrist MAD walking: ICC =" , ICC.MAD.wrist.walk$value, "[", ICC.MAD.wrist.walk$lbound, ";", ICC.MAD.wrist.walk$ubound, "]")
-ratings_igMAD.wrist.walk_long <- as.data.frame(cbind(estimates.walk.wrist$id, estimates.walk.wrist$days, estimates.walk.wrist$ig_MAD))
-names(ratings_igMAD.wrist.walk_long) <- c("id", "days", "MAD")
-ratings_igMAD.wrist.walk_long$MAD <- as.numeric(ratings_igMAD.wrist.walk_long$MAD)
-ratings_igMAD.wrist.walk  <- reshape(ratings_igMAD.wrist.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.wrist.walk <- irr::icc(ratings_igMAD.wrist.walk[,-1], model = "twoway", type = "consistency")
-paste0("wrist MAD intensity gradient walking: ICC =" , ICC.igMAD.wrist.walk$value, "[", ICC.igMAD.wrist.walk$lbound, ";", ICC.igMAD.wrist.walk$ubound, "]")
+paste0("Wrist MAD walking: ICC =" , ICC.MAD.wrist.walk$value, "[", ICC.MAD.wrist.walk$lbound, ";", ICC.MAD.wrist.walk$ubound, "]")
 
-rm(ratings_ENMO.wrist.walk, ratings_ENMO.wrist.walk_long, ratings_ENMO.wrist.nocrawl, ratings_ENMO.wrist.nocrawl_long, ratings_ENMO.wrist.crawl, ratings_ENMO.wrist.crawl_long, ratings_igENMO.wrist.walk, ratings_igENMO.wrist.walk_long, ratings_igENMO.wrist.nocrawl, ratings_igENMO.wrist.nocrawl_long, ratings_igENMO.wrist.crawl, ratings_igENMO.wrist.crawl_long, ratings_MAD.wrist.walk, ratings_MAD.wrist.walk_long, ratings_MAD.wrist.nocrawl, ratings_MAD.wrist.nocrawl_long, ratings_MAD.wrist.crawl, ratings_MAD.wrist.crawl_long, ratings_igMAD.wrist.walk, ratings_igMAD.wrist.walk_long, ratings_igMAD.wrist.nocrawl, ratings_igMAD.wrist.nocrawl_long, ratings_igMAD.wrist.crawl, ratings_igMAD.wrist.crawl_long)
-```
+# Both
+# Not walking
+ratings.both.notwalk  <- reshape(estimates.notwalk.both, idvar = "days", timevar = "id", direction = "wide")
+ratings_ENMO.both.notwalk_long <- as.data.frame(cbind(estimates.notwalk.both$id, estimates.notwalk.both$days, estimates.notwalk.both$ENMO.both))
+names(ratings_ENMO.both.notwalk_long) <- c("id", "days", "ENMO")
+ratings_ENMO.both.notwalk_long$ENMO <- as.numeric(ratings_ENMO.both.notwalk_long$ENMO)
+ratings_ENMO.both.notwalk  <- reshape(ratings_ENMO.both.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.ENMO.both.notwalk <- irr::icc(ratings_ENMO.both.notwalk[,-1], model = "twoway", type = "consistency")
+paste0("Hip * Wrist ENMO not walking: ICC =" , ICC.ENMO.both.notwalk$value, "[", ICC.ENMO.both.notwalk$lbound, ";", ICC.ENMO.both.notwalk$ubound, "]")
 
-```{r Step 5 Axivity hip * wrist milestones groups, echo=FALSE}
-ratings.both.nocrawl  <- reshape(estimates.nocrawl.both, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.both.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.both$id, estimates.nocrawl.both$days, estimates.nocrawl.both$ENMO.both))
-names(ratings_ENMO.both.nocrawl_long) <- c("id", "days", "ENMO")
-ratings_ENMO.both.nocrawl_long$ENMO <- as.numeric(ratings_ENMO.both.nocrawl_long$ENMO)
-ratings_ENMO.both.nocrawl  <- reshape(ratings_ENMO.both.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.both.nocrawl <- irr::icc(ratings_ENMO.both.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist ENMO no crawling: ICC =" , ICC.ENMO.both.nocrawl$value, "[", ICC.ENMO.both.nocrawl$lbound, ";", ICC.ENMO.both.nocrawl$ubound, "]")
-ratings_igENMO.both.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.both$id, estimates.nocrawl.both$days, estimates.nocrawl.both$ig_ENMO.both))
-names(ratings_igENMO.both.nocrawl_long) <- c("id", "days", "ENMO")
-ratings_igENMO.both.nocrawl_long$ENMO <- as.numeric(ratings_igENMO.both.nocrawl_long$ENMO)
-ratings_igENMO.both.nocrawl  <- reshape(ratings_igENMO.both.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.both.nocrawl <- irr::icc(ratings_igENMO.both.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist ENMO intensity gradient no crawling: ICC =" , ICC.igENMO.both.nocrawl$value, "[", ICC.igENMO.both.nocrawl$lbound, ";", ICC.igENMO.both.nocrawl$ubound, "]")
-ratings_MAD.both.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.both$id, estimates.nocrawl.both$days, estimates.nocrawl.both$MAD.both))
-names(ratings_MAD.both.nocrawl_long) <- c("id", "days", "MAD")
-ratings_MAD.both.nocrawl_long$MAD <- as.numeric(ratings_MAD.both.nocrawl_long$MAD)
-ratings_MAD.both.nocrawl  <- reshape(ratings_MAD.both.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.both.nocrawl <- irr::icc(ratings_MAD.both.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist MAD intensity gradient no crawling: ICC =" , ICC.MAD.both.nocrawl$value, "[", ICC.MAD.both.nocrawl$lbound, ";", ICC.MAD.both.nocrawl$ubound, "]")
-ratings_igMAD.both.nocrawl_long <- as.data.frame(cbind(estimates.nocrawl.both$id, estimates.nocrawl.both$days, estimates.nocrawl.both$ig_MAD.both))
-names(ratings_igMAD.both.nocrawl_long) <- c("id", "days", "MAD")
-ratings_igMAD.both.nocrawl_long$MAD <- as.numeric(ratings_igMAD.both.nocrawl_long$MAD)
-ratings_igMAD.both.nocrawl  <- reshape(ratings_igMAD.both.nocrawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.both.nocrawl <- irr::icc(ratings_igMAD.both.nocrawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist MAD intensity gradient no crawling: ICC =" , ICC.igMAD.both.nocrawl$value, "[", ICC.igMAD.both.nocrawl$lbound, ";", ICC.igMAD.both.nocrawl$ubound, "]")
+ratings_MAD.both.notwalk_long <- as.data.frame(cbind(estimates.notwalk.both$id, estimates.notwalk.both$days, estimates.notwalk.both$MAD.both))
+names(ratings_MAD.both.notwalk_long) <- c("id", "days", "MAD")
+ratings_MAD.both.notwalk_long$MAD <- as.numeric(ratings_MAD.both.notwalk_long$MAD)
+ratings_MAD.both.notwalk  <- reshape(ratings_MAD.both.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
+ICC.MAD.both.notwalk <- irr::icc(ratings_MAD.both.notwalk[,-1], model = "twoway", type = "consistency")
+paste0("Hip * Wrist MAD not walking: ICC =" , ICC.MAD.both.notwalk$value, "[", ICC.MAD.both.notwalk$lbound, ";", ICC.MAD.both.notwalk$ubound, "]")
 
-ratings.both.crawl  <- reshape(estimates.crawl.both, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.both.crawl_long <- as.data.frame(cbind(estimates.crawl.both$id, estimates.crawl.both$days, estimates.crawl.both$ENMO.both))
-names(ratings_ENMO.both.crawl_long) <- c("id", "days", "ENMO")
-ratings_ENMO.both.crawl_long$ENMO <- as.numeric(ratings_ENMO.both.crawl_long$ENMO)
-ratings_ENMO.both.crawl  <- reshape(ratings_ENMO.both.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.both.crawl <- irr::icc(ratings_ENMO.both.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist ENMO crawling: ICC =" , ICC.ENMO.both.crawl$value, "[", ICC.ENMO.both.crawl$lbound, ";", ICC.ENMO.both.crawl$ubound, "]")
-ratings_igENMO.both.crawl_long <- as.data.frame(cbind(estimates.crawl.both$id, estimates.crawl.both$days, estimates.crawl.both$ig_ENMO.both))
-names(ratings_igENMO.both.crawl_long) <- c("id", "days", "ENMO")
-ratings_igENMO.both.crawl_long$ENMO <- as.numeric(ratings_igENMO.both.crawl_long$ENMO)
-ratings_igENMO.both.crawl  <- reshape(ratings_igENMO.both.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.both.crawl <- irr::icc(ratings_igENMO.both.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist ENMO intensity gradient crawling: ICC =" , ICC.igENMO.both.crawl$value, "[", ICC.igENMO.both.crawl$lbound, ";", ICC.igENMO.both.crawl$ubound, "]")
-ratings_MAD.both.crawl_long <- as.data.frame(cbind(estimates.crawl.both$id, estimates.crawl.both$days, estimates.crawl.both$MAD.both))
-names(ratings_MAD.both.crawl_long) <- c("id", "days", "MAD")
-ratings_MAD.both.crawl_long$MAD <- as.numeric(ratings_MAD.both.crawl_long$MAD)
-ratings_MAD.both.crawl  <- reshape(ratings_MAD.both.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.both.crawl <- irr::icc(ratings_MAD.both.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist MAD crawling: ICC =" , ICC.MAD.both.crawl$value, "[", ICC.MAD.both.crawl$lbound, ";", ICC.MAD.both.crawl$ubound, "]")
-ratings_igMAD.both.crawl_long <- as.data.frame(cbind(estimates.crawl.both$id, estimates.crawl.both$days, estimates.crawl.both$ig_MAD.both))
-names(ratings_igMAD.both.crawl_long) <- c("id", "days", "MAD")
-ratings_igMAD.both.crawl_long$MAD <- as.numeric(ratings_igMAD.both.crawl_long$MAD)
-ratings_igMAD.both.crawl  <- reshape(ratings_igMAD.both.crawl_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.both.crawl <- irr::icc(ratings_igMAD.both.crawl[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist MAD intensity gradient crawling: ICC =" , ICC.igMAD.both.crawl$value, "[", ICC.igMAD.both.crawl$lbound, ";", ICC.igMAD.both.crawl$ubound, "]")
-
+# Walking
 ratings.both.walk  <- reshape(estimates.walk.both, idvar = "days", timevar = "id", direction = "wide")
 ratings_ENMO.both.walk_long <- as.data.frame(cbind(estimates.walk.both$id, estimates.walk.both$days, estimates.walk.both$ENMO.both))
 names(ratings_ENMO.both.walk_long) <- c("id", "days", "ENMO")
 ratings_ENMO.both.walk_long$ENMO <- as.numeric(ratings_ENMO.both.walk_long$ENMO)
 ratings_ENMO.both.walk  <- reshape(ratings_ENMO.both.walk_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.ENMO.both.walk <- irr::icc(ratings_ENMO.both.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist ENMO walking: ICC =" , ICC.ENMO.both.walk$value, "[", ICC.ENMO.both.walk$lbound, ";", ICC.ENMO.both.walk$ubound, "]")
-ratings_igENMO.both.walk_long <- as.data.frame(cbind(estimates.walk.both$id, estimates.walk.both$days, estimates.walk.both$ig_ENMO.both))
-names(ratings_igENMO.both.walk_long) <- c("id", "days", "ENMO")
-ratings_igENMO.both.walk_long$ENMO <- as.numeric(ratings_igENMO.both.walk_long$ENMO)
-ratings_igENMO.both.walk  <- reshape(ratings_igENMO.both.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igENMO.both.walk <- irr::icc(ratings_igENMO.both.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist ENMO intensity gradient walking: ICC =" , ICC.igENMO.both.walk$value, "[", ICC.igENMO.both.walk$lbound, ";", ICC.igENMO.both.walk$ubound, "]")
+paste0("Hip * Wrist ENMO walking: ICC =" , ICC.ENMO.both.walk$value, "[", ICC.ENMO.both.walk$lbound, ";", ICC.ENMO.both.walk$ubound, "]")
+
 ratings_MAD.both.walk_long <- as.data.frame(cbind(estimates.walk.both$id, estimates.walk.both$days, estimates.walk.both$MAD.both))
 names(ratings_MAD.both.walk_long) <- c("id", "days", "MAD")
 ratings_MAD.both.walk_long$MAD <- as.numeric(ratings_MAD.both.walk_long$MAD)
 ratings_MAD.both.walk  <- reshape(ratings_MAD.both.walk_long, idvar = "days", timevar = "id", direction = "wide")
 ICC.MAD.both.walk <- irr::icc(ratings_MAD.both.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist MAD walking: ICC =" , ICC.MAD.both.walk$value, "[", ICC.MAD.both.walk$lbound, ";", ICC.MAD.both.walk$ubound, "]")
-ratings_igMAD.both.walk_long <- as.data.frame(cbind(estimates.walk.both$id, estimates.walk.both$days, estimates.walk.both$ig_MAD.both))
-names(ratings_igMAD.both.walk_long) <- c("id", "days", "MAD")
-ratings_igMAD.both.walk_long$MAD <- as.numeric(ratings_igMAD.both.walk_long$MAD)
-ratings_igMAD.both.walk  <- reshape(ratings_igMAD.both.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.igMAD.both.walk <- irr::icc(ratings_igMAD.both.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * wrist MAD intensity gradient walking: ICC =" , ICC.igMAD.both.walk$value, "[", ICC.igMAD.both.walk$lbound, ";", ICC.igMAD.both.walk$ubound, "]")
-
-rm(ratings_ENMO.both.walk, ratings_ENMO.both.walk_long, ratings_ENMO.both.nocrawl, ratings_ENMO.both.nocrawl_long, ratings_ENMO.both.crawl, ratings_ENMO.both.crawl_long, ratings_igENMO.both.walk, ratings_igENMO.both.walk_long, ratings_igENMO.both.nocrawl, ratings_igENMO.both.nocrawl_long, ratings_igENMO.both.crawl, ratings_igENMO.both.crawl_long, ratings_MAD.both.walk, ratings_MAD.both.walk_long, ratings_MAD.both.nocrawl, ratings_MAD.both.nocrawl_long, ratings_MAD.both.crawl, ratings_MAD.both.crawl_long, ratings_igMAD.both.walk, ratings_igMAD.both.walk_long, ratings_igMAD.both.nocrawl, ratings_igMAD.both.nocrawl_long, ratings_igMAD.both.crawl, ratings_igMAD.both.crawl_long)
+paste0("Hip * Wrist MAD walking: ICC =" , ICC.MAD.both.walk$value, "[", ICC.MAD.both.walk$lbound, ";", ICC.MAD.both.walk$ubound, "]")
 ```
+
 # My Little Moves app
 
 ```{r Step 5 MLM pp, echo=FALSE}
@@ -727,172 +634,74 @@ rm(valid_data_16h7d, ratings_PA_long, ratings_PA, ratings_SB_long, ratings_SB, r
 
 ```{r Step 6 Axivity, echo=FALSE}
 # Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
-print("Results hip:")
-print("To reach 0.7, 0.75, and 0.8 reliability ENMO: ")
+print("Results hip: To reach 0.7")
+print("ENMO: ")
 spearman.brown(singleICC = ICC.ENMO.hip$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ENMO.hip$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ENMO.hip$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability ENMO intensity gradient: ")
-spearman.brown(singleICC = ICC.ig_ENMO.hip$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ig_ENMO.hip$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ig_ENMO.hip$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability MAD: ")
+print("MAD: ")
 spearman.brown(singleICC = ICC.MAD.hip$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.MAD.hip$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.MAD.hip$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability MAD intensity gradient: ")
-spearman.brown(singleICC = ICC.ig_MAD.hip$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ig_MAD.hip$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ig_MAD.hip$value, desiredR = 0.8)
 
-print("Results wrist:")
-print("To reach 0.7, 0.75, and 0.8 reliability ENMO: ")
+print("Results wrist: To reach 0.7")
+print("ENMO: ")
 spearman.brown(singleICC = ICC.ENMO.wrist$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ENMO.wrist$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ENMO.wrist$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability ENMO intensity gradient: ")
-spearman.brown(singleICC = ICC.ig_ENMO.wrist$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ig_ENMO.wrist$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ig_ENMO.wrist$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability MAD: ")
+print("MAD: ")
 spearman.brown(singleICC = ICC.MAD.wrist$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.MAD.wrist$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.MAD.wrist$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability MAD intensity gradient: ")
-spearman.brown(singleICC = ICC.ig_MAD.wrist$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ig_MAD.wrist$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ig_MAD.wrist$value, desiredR = 0.8)
 
-print("Results hip*wrist:")
-print("To reach 0.7, 0.75, and 0.8 reliability ENMO: ")
+print("Results hip*wrist: To reach 0.7")
+print("ENMO: ")
 spearman.brown(singleICC = ICC.ENMO.both$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ENMO.both$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ENMO.both$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability ENMO intensity gradient: ")
-spearman.brown(singleICC = ICC.ig_ENMO.both$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ig_ENMO.both$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ig_ENMO.both$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability MAD: ")
+print("MAD: ")
 spearman.brown(singleICC = ICC.MAD.both$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.MAD.both$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.MAD.both$value, desiredR = 0.8)
-print("To reach 0.7, 0.75, and 0.8 reliability MAD intensity gradient: ")
-spearman.brown(singleICC = ICC.ig_MAD.both$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.ig_MAD.both$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.ig_MAD.both$value, desiredR = 0.8)
 ```
 
-```{r Step 6 Axivity hip milestones groups, echo=FALSE}
-print("Results not crawling:")
-print("To reach 0.7 reliability ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.hip.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.hip.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
-spearman.brown(singleICC = ICC.MAD.hip.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.hip.nocrawl$value, desiredR = 0.7)
+```{r Step 6 Axivity milestones groups, echo=FALSE}
+#Hip
+print("Hip Results not walking: To reach 0.7")
+print("ENMO: ")
+spearman.brown(singleICC = ICC.ENMO.hip.notwalk$value, desiredR = 0.7)
+print("MAD: ")
+spearman.brown(singleICC = ICC.MAD.hip.notwalk$value, desiredR = 0.7)
 
-print("Results crawling:")
-print("To reach 0.7 reliability ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.hip.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.hip.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
-spearman.brown(singleICC = ICC.MAD.hip.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.hip.crawl$value, desiredR = 0.7)
-
-print("Results walking:")
-print("To reach 0.7 reliability ENMO: ")
+print("Hip Results walking: To reach 0.7")
+print("ENMO: ")
 spearman.brown(singleICC = ICC.ENMO.hip.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.hip.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
+print("MAD: ")
 spearman.brown(singleICC = ICC.MAD.hip.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.hip.walk$value, desiredR = 0.7)
-```
 
-```{r Step 6 Axivity wrist milestones groups, echo=FALSE}
-print("Results not crawling:")
-print("To reach 0.7 reliability ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.wrist.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.wrist.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
-spearman.brown(singleICC = ICC.MAD.wrist.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.wrist.nocrawl$value, desiredR = 0.7)
+#Wrist
+print("Wrist Results not walking: To reach 0.7")
+print("ENMO: ")
+spearman.brown(singleICC = ICC.ENMO.wrist.notwalk$value, desiredR = 0.7)
+print("MAD: ")
+spearman.brown(singleICC = ICC.MAD.wrist.notwalk$value, desiredR = 0.7)
 
-print("Results crawling:")
-print("To reach 0.7 reliability ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.wrist.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.wrist.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
-spearman.brown(singleICC = ICC.MAD.wrist.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.wrist.crawl$value, desiredR = 0.7)
-
-print("Results walking:")
-print("To reach 0.7 reliability ENMO: ")
+print("Wrist Results walking: To reach 0.7")
+print("ENMO: ")
 spearman.brown(singleICC = ICC.ENMO.wrist.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.wrist.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
+print("MAD: ")
 spearman.brown(singleICC = ICC.MAD.wrist.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.wrist.walk$value, desiredR = 0.7)
-```
 
-```{r Step 6 Axivity hip * wrist milestones groups, echo=FALSE}
-print("Results not crawling:")
-print("To reach 0.7 reliability ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.both.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.both.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
-spearman.brown(singleICC = ICC.MAD.both.nocrawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.both.nocrawl$value, desiredR = 0.7)
+#Both
+print("Hip * Wrist Results not walking: To reach 0.7")
+print("ENMO: ")
+spearman.brown(singleICC = ICC.ENMO.both.notwalk$value, desiredR = 0.7)
+print("MAD: ")
+spearman.brown(singleICC = ICC.MAD.both.notwalk$value, desiredR = 0.7)
 
-print("Results crawling:")
-print("To reach 0.7 reliability ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.both.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.both.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
-spearman.brown(singleICC = ICC.MAD.both.crawl$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.both.crawl$value, desiredR = 0.7)
-
-print("Results walking:")
-print("To reach 0.7 reliability ENMO: ")
+print("Hip * Wrist Results walking: To reach 0.7")
+print("ENMO: ")
 spearman.brown(singleICC = ICC.ENMO.both.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient ENMO: ")
-spearman.brown(singleICC = ICC.igENMO.both.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability MAD: ")
+print("MAD: ")
 spearman.brown(singleICC = ICC.MAD.both.walk$value, desiredR = 0.7)
-print("To reach 0.7 reliability intensity gradient MAD: ")
-spearman.brown(singleICC = ICC.igMAD.both.walk$value, desiredR = 0.7)
 ```
+
 # My Little Moves app
 
 ```{r Step 6 MLM pp, echo=FALSE}
 # Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
-print("To reach 0.7, 0.75, and 0.8 reliability PA: ")
+print("To reach 0.7 PA: ")
 spearman.brown(singleICC = ICC.PA$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.PA$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.PA$value, desiredR = 0.8)
-
 print("To reach 0.7, 0.75, and 0.8 reliability SB: ")
 spearman.brown(singleICC = ICC.SB$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.SB$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.SB$value, desiredR = 0.8)
-
 print("To reach 0.7, 0.75, and 0.8 reliability sleep: ")
 spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.7)
-spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.75)
-spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.8)
 ```
