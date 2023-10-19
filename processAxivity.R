@@ -5,6 +5,9 @@
 ## 2) the metrics roll_med_acc for x, y and z axis, ENMO and MAD;
 ## 3) indicator for non-wear detection.
 
+rm(list=ls())
+gc()
+
 # source functions directly from file, to be replaced by package installation:
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
