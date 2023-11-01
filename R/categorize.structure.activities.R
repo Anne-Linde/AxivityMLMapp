@@ -8,16 +8,17 @@ categorize.structure.activities <- function(datadir, date){
 
   # Calculate time spent in activity categories
   data$total_duration <- as.integer(as.POSIXct(data$endTime, format ="%H:%M:%S") - as.POSIXct(data$startTime, format ="%H:%M:%S"))
+  
   # Label 24-hour movement behavior and add posture
   data$behavior <- rep(NA, nrow(data))
   data$posture <- rep(NA, nrow(data))
 
   for(row in 1:nrow(data)){ # For each entry
-    if(data$activity[row] == "verzorging" | data$activity[row] == "etendrinken" | data$activity[row] == "passiefverplaatsen"){
+    if(data$activity[row] == "personalcare" | data$activity[row] == "eatingdrinking" | data$activity[row] == "passivetransport"){
       data$behavior[row] <- "SB"
-    } else if(data$activity[row] == "actiefverplaatsen") {
+    } else if(data$activity[row] == "activetransport") {
       data$behavior[row] <- "PA"
-    } else if(data$activity[row] == "zittenliggen"){
+    } else if(data$activity[row] == "sittinglying"){
       if(data$sit_lying_posture[row] == "1" | data$sit_lying_posture[row] == "5"){ # 1 = Liggend op buik, 5 = Zittend zonder steun
         data$behavior[row] <- "PA"
         if(data$sit_lying_posture[row] == "1"){ data$posture[row] <- "tummy"
@@ -33,16 +34,16 @@ categorize.structure.activities <- function(datadir, date){
         } else if (data$sit_lying_posture[row] == "9") { data$posture[row] <- "alternating"
         } else { data$posture[row] <- "dontknow" }
       }
-    } else if(data$activity[row] == "spelen"){
+    } else if(data$activity[row] == "playing"){
       # Actief spelen
       if(data$play_intensity[row] == "1" | data$play_intensity[row] == "3" | data$play_intensity[row] == "5" | data$play_intensity[row] == "7"){
-        data$activity[row] <- "actiefspelen"
+        data$activity[row] <- "activeplay"
         data$behavior[row] <- "PA"
       } else {  # Rustig spelen / Weet niet
         if(data$play_intensity[row] == "9"){
-          data$activity[row] <- "weetnietspelen"
+          data$activity[row] <- "dontknowplay"
         } else{
-          data$activity[row] <- "rustigspelen"
+          data$activity[row] <- "quietplay"
         }
         if(data$play_posture[row] == "1" | data$play_posture[row] == "5" | data$play_posture[row] == "9"){# 1 = Liggend op buik, 5 = Zittend zonder steun, 9 = Staand zonder steun
           data$behavior[row] <- "PA"
@@ -68,18 +69,18 @@ categorize.structure.activities <- function(datadir, date){
       } else if(data$play_posture[row] == "12"){ data$posture[row] <- "alternating"
       } else { data$posture[row] <- "dontknow" }
       
-    } else if(data$activity[row] == "beeldscherm"){
+    } else if(data$activity[row] == "screen"){
       if(data$screen_activity[row] == "3"){
-        data$activity[row] <- "actiefbeeldscherm"
+        data$activity[row] <- "activescreen"
         data$behavior[row] <- "PA"
       } else if(data$screen_activity[row] == "4"){
-        data$activity[row] <- "weetnietbeeldscherm"
+        data$activity[row] <- "dontknowscreen"
         data$behavior[row] <- "SB"
       } else {
-        data$activity[row] <- "passiefbeeldscherm"
+        data$activity[row] <- "passivescreen"
         data$behavior[row] <- "SB"
       }
-    } else if(data$activity[row] == "slapen"){
+    } else if(data$activity[row] == "sleeping"){
       data$behavior[row] <- "sleep"
     } 
   }
@@ -95,18 +96,18 @@ categorize.structure.activities <- function(datadir, date){
   
   ## From long activity entry format to wide day format
   # Create wide data.frame object
-  data_category <- data.frame(matrix(NA, nrow = nrow(data), 
+  data_category <- data.frame(matrix(0, nrow = nrow(data), 
                                      ncol = 4 + 2*length(unique(data$activity)) + 3))
   colnames(data_category) <- c("castorID", "cohort", "date", "measurement",
-                               paste0("tijd_", unique(data$activity)),
+                               paste0("time_", unique(data$activity)),
                                paste0("freq_", unique(data$activity)),
                                "PA", "SB", "sleep")
   # data_category <- data.frame(matrix(NA, nrow = length(unique(data$castorID))*7, 
   #                                    ncol = 4 + 4*length(unique(data$activity)) + 3))
   # colnames(data_category) <- c("castorID", "cohort", "date", "measurement",
-  #                              paste0("tijd_", unique(data$activity)),
+  #                              paste0("time_", unique(data$activity)),
   #                              paste0("freq_", unique(data$activity)),
-  #                              paste0("tijd_posture_", unique(data$posture)),
+  #                              paste0("time_posture_", unique(data$posture)),
   #                              paste0("freq_posture_", unique(data$posture)),
   #                              "PA", "SB", "sleep")
   
@@ -127,17 +128,17 @@ categorize.structure.activities <- function(datadir, date){
           data_day <- tmp[tmp$date == unique(tmp$date)[day],] #Select data for this day
           
           for(category in 1:length(unique(data_day$activity))){ # For each category entered by the parent
-            activity_sum_day <- sum(data_day[data_day$activity == unique(data_day$activity)[category], ]$total_duration) # Calculate total activity duration
-            column_index_duration <- which(colnames(data_category) == paste0("tijd_", unique(data_day$activity)[category]))
+            activity_sum_day <- sum(data_day[data_day$activity == unique(data_day$activity)[category], ]$total_duration, na.rm = TRUE) # Calculate total activity duration
+            column_index_duration <- which(colnames(data_category) == paste0("time_", unique(data_day$activity)[category]))
             data_category[counter, column_index_duration] <- activity_sum_day #Save total duration entered for that category
-            activity_frequency_day <- sum(data_day$activity == unique(data_day$activity)[category]) # Calculate activity frequency
+            activity_frequency_day <- sum(data_day$activity == unique(data_day$activity)[category], na.rm = TRUE) # Calculate activity frequency
             column_index_frequency <- which(colnames(data_category) == paste0("freq_", unique(data_day$activity)[category]))
             data_category[counter, column_index_frequency] <- activity_frequency_day #Save frequency of category entries
           }
           # for(posture in 1:length(unique(data_day$posture))){ # For each posture entered
           #   if(!is.na(data_day$posture[posture])){
           #     posture_sum_day <- sum(data_day[data_day$posture == unique(data_day$posture)[posture], ]$total_duration, na.rm = TRUE) # Calculate total activity duration
-          #     column_index_duration <- which(colnames(data_category) == paste0("tijd_posture_", unique(data_day$posture)[posture]))
+          #     column_index_duration <- which(colnames(data_category) == paste0("time_posture_", unique(data_day$posture)[posture]))
           #     data_category[counter, column_index_duration] <- posture_sum_day #Save total duration entered for that category
           #     posture_frequency_day <- sum(data_day$posture == unique(data_day$posture)[posture], na.rm = TRUE) # Calculate activity frequency
           #     column_index_frequency <- which(colnames(data_category) == paste0("freq_posture_", unique(data_day$posture)[posture]))
@@ -157,17 +158,17 @@ categorize.structure.activities <- function(datadir, date){
     }
   }
   data_category <- as.data.frame(data_category)
-  data_category <- data_category[rowSums(is.na(data_category)) != ncol(data_category), ]
+  data_category <- data_category[-which(data_category$castorID == 0), ]
   
   # Add day and if weekendday
   data_category$day <- weekdays(as.Date(data_category$date))
   for (day in 1:length(data_category$day)) {
-    if(data_category$day[day] == "zaterdag" || data_category$day[day] == "zondag"){
+    if(data_category$day[day] == "Saturday" || data_category$day[day] == "Sunday"){
       data_category$weekendday[day] <- 1
     } else {data_category$weekendday[day] <- 0}
   }
   library(dplyr)
-  data_category <- data_category %>% relocate(c(day, weekendday), .before = tijd_passiefbeeldscherm)
+  data_category <- data_category %>% relocate(c(day, weekendday), .before = time_passivescreen)
   
   # Save as.csv
   write.csv(data_category, paste0(datadir, "/", date, "_MLMapp_pp_duration_frequency_day.csv"))
