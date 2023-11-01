@@ -21,8 +21,8 @@ combine.save.plots <- function(plot1, plot2, format, savedir, filename){
   if(format == "boxplots"){
     gridExtra::grid.arrange(plot1, plot2, nrow = 2) #arranges plots within grid
     plots <- gridExtra::arrangeGrob(plot1 + ggplot2::theme(legend.position="top"),
-                                       plot2 + ggplot2::theme(legend.position="none"),
-                                       nrow=2) # generates plot
+                                    plot2 + ggplot2::theme(legend.position="none"),
+                                    nrow=2) # generates plot
     
   }
   

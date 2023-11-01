@@ -12,6 +12,8 @@ filepath.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/
 # Use app data activities
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
 filename.app <- paste0("/", date, "_activities_castor_linked_duration.csv")
+filename.app.day <- paste0("/", date, "_MLMapp_pp_duration_frequency_day.csv")
+
 # Path to directory to save the data list
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output"
 
@@ -19,13 +21,19 @@ savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Litt
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
-## Load data
+## Load app data
 data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data
 
-## Match axivity data to app entries
+## Match Axivity data to the app entries
 #run L22 once: then load in data from saved file
 #data.app.axivity <- match.app.axivity(data.app, filepath.hip, filepath.wrist, tz, date)
 load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_ax_entry_20231031.RData")
+
+## Plot the synchronized data in overlay plots per day
+for(pp in 1:length(unique(data.pp$castorID))){
+  create.overlayplot(data.app, filepath.hip, filepath.wrist, unique(data.pp$castorID)[pp], savedir)
+}
+
 
 # Combine data for both placements
 #data.app.axivity$ENMO.both = data.app.axivity$ENMO.hip * data.app.axivity$ENMO.wrist 
