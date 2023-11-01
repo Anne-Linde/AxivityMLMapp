@@ -1,12 +1,17 @@
+## This script was used to synchronize the axivity data to the app entries (as described in section 2.8.3.1 of the article)
+
+rm(list = ls())
+gc()
+
 ## User input 
-date <- "20231010" # Date 
+date <- "20231031" # Date of last data update
 tz = "Europe/Amsterdam"
 # Use preprocessed Axivity data (data without non-wear)
 filepath.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/hip/nonwear_removed"
 filepath.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/wrist/nonwear_removed"
 # Use app data activities
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
-filename.app <- "/20230918_activities_castor_linked_duration.csv"
+filename.app <- paste0("/", date, "_activities_castor_linked_duration.csv")
 # Path to directory to save the data list
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output"
 
@@ -20,13 +25,7 @@ data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperio
 ## Match axivity data to app entries
 #run L22 once: then load in data from saved file
 #data.app.axivity <- match.app.axivity(data.app, filepath.hip, filepath.wrist, tz, date)
-load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_ax_entry_20231010.RData")
-
-# From gravitational units in g to mg
-data.app.axivity$ENMO.hip <- data.app.axivity$ENMO.hip * 1000
-data.app.axivity$ENMO.wrist <- data.app.axivity$ENMO.wrist * 1000
-data.app.axivity$MAD.hip <- data.app.axivity$MAD.hip * 1000
-data.app.axivity$MAD.wrist <- data.app.axivity$MAD.wrist * 1000
+load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_ax_entry_20231031.RData")
 
 # Combine data for both placements
 #data.app.axivity$ENMO.both = data.app.axivity$ENMO.hip * data.app.axivity$ENMO.wrist 

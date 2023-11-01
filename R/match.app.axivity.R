@@ -1,4 +1,5 @@
-#Function to match Axivity with App data, for each app entry the mean ENMO and MAD are calculated for both hip and wrist data
+#Function to match Axivity with App data, for each app entry the median ENMO and MAD are calculated for both hip and wrist data
+# output in acceleration values in mg 
 match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
   
   #PARALLEL LOAd
@@ -50,9 +51,9 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
       
       if(exists("hip")){
         tmp.hip <- hip[which(hip$timestampPOSIX >= start & hip$timestampPOSIX <= end),]
-        ENMO <- median(tmp.hip$ENMO, na.rm = TRUE) # Save ENMO
+        ENMO <- median(tmp.hip$ENMO, na.rm = TRUE)*1000 # Save ENMO
         ENMO.hip <- c(ENMO.hip, ENMO)
-        MAD <- median(tmp.hip$MAD, na.rm = TRUE) # Save MAD
+        MAD <- median(tmp.hip$MAD, na.rm = TRUE)*1000 # Save MAD
         MAD.hip <- c(MAD.hip, MAD)
       } else {
         ENMO.hip <- c(ENMO.hip, NA)
@@ -60,9 +61,9 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
       }
       if(exists("wrist")){
         tmp.wrist <- wrist[which(wrist$timestampPOSIX >= start & wrist$timestampPOSIX <= end),]
-        ENMO <- median(tmp.wrist$ENMO, na.rm = TRUE) # Save ENMO
+        ENMO <- median(tmp.wrist$ENMO, na.rm = TRUE)*1000 # Save ENMO
         ENMO.wrist <- c(ENMO.wrist, ENMO)
-        MAD <- median(tmp.wrist$MAD, na.rm = TRUE) # Save MAD
+        MAD <- median(tmp.wrist$MAD, na.rm = TRUE)*1000 # Save MAD
         MAD.wrist <- c(MAD.wrist, MAD)
       } else {
         ENMO.wrist <- c(ENMO.wrist, NA)
@@ -72,6 +73,8 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
     app <- cbind(app, ENMO.hip, ENMO.wrist, MAD.hip, MAD.wrist)
     data.pp <- rbind(data.pp, app)
   }
+  # TO DO: change labels to EN
+  
   save(data.pp, file = paste0(savedir, "/app_ax_entry_", date, ".RData"))
   parallel::stopCluster(cl)
   return(data.pp)
