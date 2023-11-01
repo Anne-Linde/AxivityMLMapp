@@ -73,8 +73,7 @@ match.app.axivity <- function(data.app, filepath.hip, filepath.wrist, tz, date){
     app <- cbind(app, ENMO.hip, ENMO.wrist, MAD.hip, MAD.wrist)
     data.pp <- rbind(data.pp, app)
   }
-  # TO DO: change labels to EN
-  
+
   save(data.pp, file = paste0(savedir, "/app_ax_entry_", date, ".RData"))
   parallel::stopCluster(cl)
   return(data.pp)
