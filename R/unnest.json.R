@@ -208,7 +208,14 @@ unnest.json <- function(datadir, date){
                                    "play_posture", "play_intensity", 
                                    "screen_activity", "screen_type",
                                    "sleep_posture")
+  
   results_untangled <- results_untangled[-which(is.na(results_untangled$pp)), ]
+  results_untangled$activity <- as.factor(results_untangled$activity)
+  results_untangled$activity <- dplyr::recode(results_untangled$activity, weetniet = "dontknow", iemandanders = "someoneelse",
+                                              zittenliggen = "sittinglying", beeldscherm = "screen", verzorging = "personalcare",
+                                              spelen = "playing", slapen = "sleeping", other = "otheractivity", etendrinken = "eatingdrinking",
+                                              actiefverplaatsen = "activetransport", passiefverplaatsen = "passivetransport", .default = NA_character_)
+  
   
   ### STEP 3: Link the research codes
   code_intake <- c()
@@ -253,7 +260,7 @@ unnest.json <- function(datadir, date){
   
   ### STEP 4: Save the data
   # Save as .csv
-  write.csv(motormilestones, paste(datadir, date, "motormilestones.csv", sep = "_"))
-  write.csv(activities, paste(datadir, date, "activities.csv", sep = "_"))
+  write.csv(motormilestones, paste0(datadir, "/", date, "_motormilestones.csv"))
+  write.csv(activities, paste0(datadir, "/", date, "_activities.csv"))
 }
 
