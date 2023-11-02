@@ -34,43 +34,11 @@ for(pp in 1:length(unique(data.pp$castorID))){
   create.overlayplot(data.app, filepath.hip, filepath.wrist, unique(data.pp$castorID)[pp], savedir)
 }
 
-
+#### Rewrite this script from here
 # Combine data for both placements
 #data.app.axivity$ENMO.both = data.app.axivity$ENMO.hip * data.app.axivity$ENMO.wrist 
 #data.app.axivity$MAD.both = data.app.axivity$MAD.hip * data.app.axivity$MAD.wrist 
 
-# Reshape data to long format
-df_long <- tidyr::gather(data.app.axivity, metric, value, ENMO.hip:MAD.wrist)
-#df_long <- tidyr::gather(data.app.axivity, metric, value, ENMO.hip:MAD.both)
-df_long.ENMO <- df_long[which(startsWith(df_long$metric, "ENMO")),]
-df_long.MAD <- df_long[which(startsWith(df_long$metric, "MAD")),]
-
-### Category distributions
-## BOXPLOT
-level_order <- c("actiefverplaatsen", "passiefverplaatsen", "actiefspelen", "rustigspelen", "weetnietspelen", 
-                 "actiefbeeldscherm", "passiefbeeldscherm", "zittenliggen", "etendrinken", 
-                 "verzorging", "slapen", "iemandanders", "other", "weetniet")
-bxp_ENMO <- ggplot2::ggplot(df_long.ENMO, ggplot2::aes(y = value, x = as.factor(activity), fill =metric)) + 
-  ggplot2::geom_boxplot(outlier.shape = 19, outlier.alpha = 0.1) + ggplot2::theme_classic() +
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
-  ggplot2::scale_x_discrete(limits = level_order) + ggplot2::xlab("") + 
-  ggplot2::ylab(expression(paste("ENMO (m", italic("g"), ")"))) +
-  ggplot2::scale_fill_discrete(name = "Accelerometer placement", labels = c("Hip", "Wrist"))
-  
-bxp_MAD <- ggplot2::ggplot(df_long.MAD, ggplot2::aes(y = value, x = as.factor(activity), fill =metric)) + 
-  ggplot2::geom_boxplot(outlier.shape = 19, outlier.alpha = 0.1) + ggplot2::theme_classic() +
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
-  ggplot2::scale_x_discrete(limits = level_order) + ggplot2::xlab("App categories") + 
-  ggplot2::ylab(expression(paste("MAD (m", italic("g"), ")"))) +
-  ggplot2::scale_fill_discrete(name = "Accelerometer placement", labels = c("Hip", "Wrist"))
-
-gridExtra::grid.arrange(bxp_ENMO, bxp_MAD, nrow=2) #arranges plots within grid
-
-boxplots <- gridExtra::arrangeGrob(bxp_ENMO + ggplot2::theme(legend.position="top"),
-                                   bxp_MAD + ggplot2::theme(legend.position="none"),
-                                      nrow=2) # generates plot
-plot(boxplots) #print the plot
-ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/categories/boxplot_categories.png"), boxplots, width = 10, height = 8, dpi = 600) #saves g
 
 ## SCATTERPLOTS
 df2 <- dplyr::select(data.app.axivity, -activity)
