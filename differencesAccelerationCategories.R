@@ -1,6 +1,6 @@
 ### This script examines the differences between acceleration values of the app categories by:
 ## 1) Fitting general linear mixed models with seperate random intercepts for activity over participants
-## 2) Post hov
+## 2) Post hoc
 
 rm(list = ls())
 gc()
@@ -13,24 +13,17 @@ savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Litt
 
 # Load acceleration values for activity entries
 load(datadir)
-load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/logtransformed_app_ax_entry_20231025.RData")
+
+# data.pp$ENMO.hip<- data.pp$ENMO.hip*1000
+# data.pp$ENMO.wrist<- data.pp$ENMO.wrist*1000
+# data.pp$MAD.hip<- data.pp$MAD.hip*1000
+# data.pp$MAD.wrist<- data.pp$MAD.wrist*1000
+
+#save(data.pp, file = paste0("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_ax_entry_", date, ".RData"))
 
 # source functions directly from file, to be replaced by package installation:
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
-
-# Long data
-df_long <- tidyr::gather(data.pp, metric, value, logENMO.hip:logMAD.wrist)
-placement <- c()
-metric <- c()
-for(row in 1:nrow(df_long)){
-  variable <- strsplit(df_long$metric[row], split = '[.]')
-  placement <- c(placement, variable[[1]][2])
-  metric <- c(metric, variable[[1]][1])
-}
-df_long$metric <-metric
-df_long$placement <- placement
-
 
 #### STEP 1: Plot the acceleration distributions in the different app categories
 # Reshape data to long format
@@ -80,7 +73,6 @@ plot(boxplots) #print the plot
 ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/categories/boxplot_categories.png"), boxplots, width = 10, height = 8, dpi = 600) #saves g
 
 #### STEP 2: Test for differences in acceleration (use g-units instead of mg)
-
 # Transform acceleration data
 data.pp$logENMO.hip <- log((data.pp$ENMO.hip/1000) + 0.001) 
 data.pp$logENMO.wrist <- log((data.pp$ENMO.wrist/1000) + 0.001)
@@ -124,13 +116,15 @@ jtools::summ(acc_act_act_id.loghipENMO)
 report::report_table(acc_act_act_id.loghipENMO)
 # Use following lines to relevel the models for the different contrasts
 acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "sittinglying")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "personalcare")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "eatingdrinking")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "passivescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "activescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "dontknowplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "passivetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "activetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipENMO <- lme4::lmer(logENMO.hip ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+car::Anova(acc_act_act_id.loghipENMO)
 report::report_table(acc_act_act_id.loghipENMO)
 jtools::summ(acc_act_act_id.loghipENMO)
 
@@ -169,13 +163,14 @@ jtools::summ(acc_act_act_id.loghipMAD)
 report::report_table(acc_act_act_id.loghipMAD)
 # Use following lines to relevel the models for the different contrasts
 acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "sittinglying")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "personalcare")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "eatingdrinking")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "passivescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "activescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "dontknowplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "passivetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "activetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 report::report_table(acc_act_act_id.loghipMAD)
 jtools::summ(acc_act_act_id.loghipMAD)
 
@@ -215,13 +210,14 @@ jtools::summ(acc_act_act_id.logwristENMO)
 report::report_table(acc_act_act_id.logwristENMO)
 # Use following lines to relevel the models for the different contrasts
 acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "sittinglying")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "personalcare")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "eatingdrinking")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "passivescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "activescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "dontknowplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "passivetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "activetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristENMO <- lme4::lmer(logENMO.wrist ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 report::report_table(acc_act_act_id.logwristENMO)
 jtools::summ(acc_act_act_id.logwristENMO)
 
@@ -260,12 +256,13 @@ jtools::summ(acc_act_act_id.logwristMAD)
 report::report_table(acc_act_act_id.logwristMAD)
 # Use following lines to relevel the models for the different contrasts
 acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "sittinglying")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "personalcare")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "eatingdrinking")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "passivescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "activescreen")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "dontknowplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
-acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "passivetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "activetransport")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "quietplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
+acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 report::report_table(acc_act_act_id.logwristMAD)
 jtools::summ(acc_act_act_id.logwristMAD)
