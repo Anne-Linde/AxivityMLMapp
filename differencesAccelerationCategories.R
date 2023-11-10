@@ -1,6 +1,9 @@
 ### This script examines the differences between acceleration values of the app categories by:
-## 1) Fitting general linear mixed models with seperate random intercepts for activity over participants
-## 2) Post hoc
+## 1) Plotting the acceleration distributions for the My Little Moves app categories
+## 2) Fitting general linear mixed models with separate random intercepts for activity over participants
+## 3) Fitting general linear mixed models with separate random intercepts for behavior over participants
+## 4) Fitting general linear mixed models for 24-hour movement behaviors with adjusted labeling based on posture/category
+
 
 rm(list = ls())
 gc()
@@ -71,6 +74,14 @@ boxplots <- gridExtra::arrangeGrob(bxp_ENMO + ggplot2::theme(legend.position="to
                                    nrow=2) # generates plot
 plot(boxplots) #print the plot
 ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/categories/boxplot_categories.png"), boxplots, width = 10, height = 8, dpi = 600) #saves g
+
+### 24-hour movement distributions
+bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "behavior", order_categories = c("PA", "SB", "sleep"))
+bxp_ENMO
+bxp_MAD <- create.boxplot(data_long = df_long.MAD, metric = "MAD", per = "behavior", order_categories = c("PA", "SB", "sleep"))
+bxp_MAD
+
+combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "boxplot_behaviors.png")
 
 #### STEP 2: Test for differences in acceleration (use g-units instead of mg)
 # Transform acceleration data
@@ -266,3 +277,571 @@ acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(act
 acc_act_act_id.logwristMAD <- lme4::lmer(logMAD.wrist ~ forcats::fct_relevel(activity, ref = "activeplay")  + (1 | castorID/activity), data = data.pp, REML = FALSE)
 report::report_table(acc_act_act_id.logwristMAD)
 jtools::summ(acc_act_act_id.logwristMAD)
+
+
+#### STEP 3: Test for differences in acceleration between movement behaviors
+### Hip placement
+## ENMO
+# Un-transformed data
+acc_beh.hipENMO <- glm(ENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.hipENMO <- lme4::lmer(ENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.hipENMO, acc_beh_id.hipENMO, test="Chisq")
+rm(acc_beh.hipENMO)
+acc_beh_id_beh.hipENMO <- lme4::lmer(ENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = FALSE)
+anova(acc_beh_id.hipENMO, acc_beh_id_beh.hipENMO, test="Chisq")
+rm(acc_beh_id.hipENMO)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.hipENMO)
+qqnorm(residuals(acc_beh_id_beh.hipENMO))
+
+# Transformed data
+acc_beh.loghipENMO <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.loghipENMO <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.loghipENMO, acc_beh_id.loghipENMO, test="Chisq")
+rm(acc_beh.loghipENMO)
+acc_beh_id_beh.loghipENMO <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+anova(acc_beh_id.loghipENMO, acc_beh_id_beh.loghipENMO, test="Chisq")
+rm(acc_beh_id.loghipENMO)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.loghipENMO)
+qqnorm(residuals(acc_beh_id_beh.loghipENMO))
+
+# Report fitted model based on transformed data
+rm(acc_beh_id_beh.hipENMO)
+#summary(acc_beh_id_beh.loghipENMO)
+car::Anova(acc_beh_id_beh.loghipENMO)
+jtools::summ(acc_beh_id_beh.loghipENMO)
+logLik(acc_beh_id_beh.loghipENMO)
+coef(summary(acc_beh_id_beh.loghipENMO))
+
+# Use following lines to relevel the models for the different contrasts
+acc_beh_id_beh.loghipENMO <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "SB")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+
+## MAD
+# Un-transformed data
+acc_beh.hipMAD <- glm(MAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.hipMAD <- lme4::lmer(MAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.hipMAD, acc_beh_id.hipMAD, test="Chisq")
+rm(acc_beh.hipMAD)
+acc_beh_id_beh.hipMAD <- lme4::lmer(MAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = FALSE)
+anova(acc_beh_id.hipMAD, acc_beh_id_beh.hipMAD, test="Chisq")
+rm(acc_beh_id.hipMAD)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.hipMAD)
+qqnorm(residuals(acc_beh_id_beh.hipMAD))
+
+# Transformed data
+acc_beh.loghipMAD <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.loghipMAD <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.loghipMAD, acc_beh_id.loghipMAD, test="Chisq")
+rm(acc_beh.loghipMAD)
+acc_beh_id_beh.loghipMAD <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+anova(acc_beh_id.loghipMAD, acc_beh_id_beh.loghipMAD, test="Chisq")
+rm(acc_beh_id.loghipMAD)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.loghipMAD)
+qqnorm(residuals(acc_beh_id_beh.loghipMAD))
+
+# Report fitted model based on transformed data
+rm(acc_beh_id_beh.hipMAD)
+#summary(acc_beh_id_beh.loghipMAD)
+car::Anova(acc_beh_id_beh.loghipMAD)
+jtools::summ(acc_beh_id_beh.loghipMAD)
+logLik(acc_beh_id_beh.loghipMAD)
+coef(summary(acc_beh_id_beh.loghipMAD))
+
+# Use following lines to relevel the models for the different contrasts
+acc_beh_id_beh.loghipMAD <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "SB")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+
+### Wrist placement
+## ENMO
+# Un-transformed data
+acc_beh.wristENMO <- glm(ENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.wristENMO <- lme4::lmer(ENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.wristENMO, acc_beh_id.wristENMO, test="Chisq")
+rm(acc_beh.wristENMO)
+acc_beh_id_beh.wristENMO <- lme4::lmer(ENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = FALSE)
+anova(acc_beh_id.wristENMO, acc_beh_id_beh.wristENMO, test="Chisq")
+rm(acc_beh_id.wristENMO)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.wristENMO)
+qqnorm(residuals(acc_beh_id_beh.wristENMO))
+
+# Transformed data
+acc_beh.logwristENMO <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.logwristENMO <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.logwristENMO, acc_beh_id.logwristENMO, test="Chisq")
+rm(acc_beh.logwristENMO)
+acc_beh_id_beh.logwristENMO <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+anova(acc_beh_id.logwristENMO, acc_beh_id_beh.logwristENMO, test="Chisq")
+rm(acc_beh_id.logwristENMO)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.logwristENMO)
+qqnorm(residuals(acc_beh_id_beh.logwristENMO))
+
+# Report fitted model based on transformed data
+rm(acc_beh_id_beh.wristENMO)
+#summary(acc_beh_id_beh.logwristENMO)
+car::Anova(acc_beh_id_beh.logwristENMO)
+jtools::summ(acc_beh_id_beh.logwristENMO)
+logLik(acc_beh_id_beh.logwristENMO)
+coef(summary(acc_beh_id_beh.logwristENMO))
+
+# Use following lines to relevel the models for the different contrasts
+acc_beh_id_beh.logwristENMO <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "SB")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+
+## MAD
+# Un-transformed data
+acc_beh.wristMAD <- glm(MAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.wristMAD <- lme4::lmer(MAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.wristMAD, acc_beh_id.wristMAD, test="Chisq")
+rm(acc_beh.wristMAD)
+acc_beh_id_beh.wristMAD <- lme4::lmer(MAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = FALSE)
+anova(acc_beh_id.wristMAD, acc_beh_id_beh.wristMAD, test="Chisq")
+rm(acc_beh_id.wristMAD)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.wristMAD)
+qqnorm(residuals(acc_beh_id_beh.wristMAD))
+
+# Transformed data
+acc_beh.logwristMAD <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp)
+acc_beh_id.logwristMAD <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(acc_beh.logwristMAD, acc_beh_id.logwristMAD, test="Chisq")
+rm(acc_beh.logwristMAD)
+acc_beh_id_beh.logwristMAD <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+anova(acc_beh_id.logwristMAD, acc_beh_id_beh.logwristMAD, test="Chisq")
+rm(acc_beh_id.logwristMAD)
+
+#Plot normality of residuals
+plot(acc_beh_id_beh.logwristMAD)
+qqnorm(residuals(acc_beh_id_beh.logwristMAD))
+
+# Report fitted model based on transformed data
+rm(acc_beh_id_beh.wristMAD)
+#summary(acc_beh_id_beh.logwristMAD)
+car::Anova(acc_beh_id_beh.logwristMAD)
+jtools::summ(acc_beh_id_beh.logwristMAD)
+logLik(acc_beh_id_beh.logwristMAD)
+coef(summary(acc_beh_id_beh.logwristMAD))
+
+# Use following lines to relevel the models for the different contrasts
+acc_beh_id_beh.logwristMAD <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "SB")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
+
+
+#### STEP 4: Test for differences in acceleration between movement behaviors when labeling of behavior changes
+# Using log transformed data
+### 2. Sitting without support: PA (model 1) -> SB
+index_sitting <- which(data.pp$posture == "sitting_withoutsupport")
+length(index_sitting)
+data.pp$behavior2 <- data.pp$behavior
+data.pp$behavior2[index_sitting] <- "SB"
+
+## Hip ENMO
+loghipENMO.model2 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp)
+loghipENMO.model2.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model2, loghipENMO.model2.id, test="Chisq")
+rm(loghipENMO.model2)
+loghipENMO.model2.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp, REML = TRUE)
+anova(loghipENMO.model2.id, loghipENMO.model2.id.beh, test="Chisq")
+rm(loghipENMO.model2.id)
+
+jtools::summ(loghipENMO.model2.id.beh)
+
+## Hip MAD
+loghipMAD.model2 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp)
+loghipMAD.model2.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model2, loghipMAD.model2.id, test="Chisq")
+rm(loghipMAD.model2)
+loghipMAD.model2.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp, REML = TRUE)
+anova(loghipMAD.model2.id, loghipMAD.model2.id.beh, test="Chisq")
+rm(loghipMAD.model2.id)
+
+jtools::summ(loghipMAD.model2.id.beh)
+
+## Wrist ENMO
+logwristENMO.model2 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp)
+logwristENMO.model2.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model2, logwristENMO.model2.id, test="Chisq")
+rm(logwristENMO.model2)
+logwristENMO.model2.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp, REML = TRUE)
+anova(logwristENMO.model2.id, logwristENMO.model2.id.beh, test="Chisq")
+rm(logwristENMO.model2.id)
+
+jtools::summ(logwristENMO.model2.id.beh)
+
+## Wrist MAD
+logwristMAD.model2 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp)
+logwristMAD.model2.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model2, logwristMAD.model2.id, test="Chisq")
+rm(logwristMAD.model2)
+logwristMAD.model2.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp, REML = TRUE)
+anova(logwristMAD.model2.id, logwristMAD.model2.id.beh, test="Chisq")
+rm(logwristMAD.model2.id)
+
+jtools::summ(logwristMAD.model2.id.beh)
+
+### 3. Standing without support: PA (model 1) -> SB
+index_standing_withoutsupport <- which(data.pp$posture == "standing_withoutsupport")
+length(index_standing_withoutsupport)
+data.pp$behavior3 <- data.pp$behavior
+data.pp$behavior3[index_standing_withoutsupport] <- "SB"
+
+## Hip ENMO
+loghipENMO.model3 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep"), data = data.pp)
+loghipENMO.model3.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model3, loghipENMO.model3.id, test="Chisq")
+rm(loghipENMO.model3)
+loghipENMO.model3.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID/behavior3), data = data.pp, REML = TRUE)
+anova(loghipENMO.model3.id, loghipENMO.model3.id.beh, test="Chisq")
+rm(loghipENMO.model3.id)
+
+jtools::summ(loghipENMO.model3.id.beh)
+
+## Hip MAD
+loghipMAD.model3 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep"), data = data.pp)
+loghipMAD.model3.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model3, loghipMAD.model3.id, test="Chisq")
+rm(loghipMAD.model3)
+loghipMAD.model3.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID/behavior3), data = data.pp, REML = TRUE)
+anova(loghipMAD.model3.id, loghipMAD.model3.id.beh, test="Chisq")
+rm(loghipMAD.model3.id)
+
+jtools::summ(loghipMAD.model3.id.beh)
+
+## Wrist ENMO
+logwristENMO.model3 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep"), data = data.pp)
+logwristENMO.model3.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model3, logwristENMO.model3.id, test="Chisq")
+rm(logwristENMO.model3)
+logwristENMO.model3.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID/behavior3), data = data.pp, REML = TRUE)
+anova(logwristENMO.model3.id, logwristENMO.model3.id.beh, test="Chisq")
+rm(logwristENMO.model3.id)
+
+jtools::summ(logwristENMO.model3.id.beh)
+
+## Wrist MAD
+logwristMAD.model3 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep"), data = data.pp)
+logwristMAD.model3.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model3, logwristMAD.model3.id, test="Chisq")
+rm(logwristMAD.model3)
+logwristMAD.model3.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior3, ref = "sleep")  + (1 | castorID/behavior3), data = data.pp, REML = TRUE)
+anova(logwristMAD.model3.id, logwristMAD.model3.id.beh, test="Chisq")
+rm(logwristMAD.model3.id)
+
+jtools::summ(logwristMAD.model3.id.beh)
+
+### 4. Playing active - carried does not exist in the data
+
+### 5. Playing active - lying: PA (model 1) -> SB
+index_activeplay <- which(data.pp$activity == "activeplay")
+index_lying <- which(data.pp$posture == "lying")
+index_activeplay_lying <- intersect(index_activeplay, index_lying)
+length(index_activeplay_lying)
+data.pp$behavior5 <- data.pp$behavior
+data.pp$behavior5[index_activeplay_lying] <- "SB"
+
+## Hip ENMO
+loghipENMO.model5 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep"), data = data.pp)
+loghipENMO.model5.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model5, loghipENMO.model5.id, test="Chisq")
+rm(loghipENMO.model5)
+loghipENMO.model5.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID/behavior5), data = data.pp, REML = TRUE)
+anova(loghipENMO.model5.id, loghipENMO.model5.id.beh, test="Chisq")
+rm(loghipENMO.model5.id)
+
+jtools::summ(loghipENMO.model5.id.beh)
+
+## Hip MAD
+loghipMAD.model5 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep"), data = data.pp)
+loghipMAD.model5.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model5, loghipMAD.model5.id, test="Chisq")
+rm(loghipMAD.model5)
+loghipMAD.model5.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID/behavior5), data = data.pp, REML = TRUE)
+anova(loghipMAD.model5.id, loghipMAD.model5.id.beh, test="Chisq")
+rm(loghipMAD.model5.id)
+
+jtools::summ(loghipMAD.model5.id.beh)
+
+## Wrist ENMO
+logwristENMO.model5 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep"), data = data.pp)
+logwristENMO.model5.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model5, logwristENMO.model5.id, test="Chisq")
+rm(logwristENMO.model5)
+logwristENMO.model5.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID/behavior5), data = data.pp, REML = TRUE)
+anova(logwristENMO.model5.id, logwristENMO.model5.id.beh, test="Chisq")
+rm(logwristENMO.model5.id)
+
+jtools::summ(logwristENMO.model5.id.beh)
+
+## Wrist MAD
+logwristMAD.model5 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep"), data = data.pp)
+logwristMAD.model5.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model5, logwristMAD.model5.id, test="Chisq")
+rm(logwristMAD.model5)
+logwristMAD.model5.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior5, ref = "sleep")  + (1 | castorID/behavior5), data = data.pp, REML = TRUE)
+anova(logwristMAD.model5.id, logwristMAD.model5.id.beh, test="Chisq")
+rm(logwristMAD.model5.id)
+
+jtools::summ(logwristMAD.model5.id.beh)
+
+### 6. Playing active - sitting: PA (model 1) -> SB
+index_sitting <- which(data.pp$posture == "sitting")
+index_activeplay_sitting <- intersect(index_activeplay, index_sitting)
+length(index_activeplay_sitting)
+data.pp$behavior6 <- data.pp$behavior
+data.pp$behavior6[index_activeplay_sitting] <- "SB"
+
+## Hip ENMO
+loghipENMO.model6 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep"), data = data.pp)
+loghipENMO.model6.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model6, loghipENMO.model6.id, test="Chisq")
+rm(loghipENMO.model6)
+loghipENMO.model6.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID/behavior6), data = data.pp, REML = TRUE)
+anova(loghipENMO.model6.id, loghipENMO.model6.id.beh, test="Chisq")
+rm(loghipENMO.model6.id)
+
+jtools::summ(loghipENMO.model6.id.beh)
+
+## Hip MAD
+loghipMAD.model6 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep"), data = data.pp)
+loghipMAD.model6.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model6, loghipMAD.model6.id, test="Chisq")
+rm(loghipMAD.model6)
+loghipMAD.model6.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID/behavior6), data = data.pp, REML = TRUE)
+anova(loghipMAD.model6.id, loghipMAD.model6.id.beh, test="Chisq")
+rm(loghipMAD.model6.id)
+
+jtools::summ(loghipMAD.model6.id.beh)
+
+## Wrist ENMO
+logwristENMO.model6 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep"), data = data.pp)
+logwristENMO.model6.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model6, logwristENMO.model6.id, test="Chisq")
+rm(logwristENMO.model6)
+logwristENMO.model6.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID/behavior6), data = data.pp, REML = TRUE)
+anova(logwristENMO.model6.id, logwristENMO.model6.id.beh, test="Chisq")
+rm(logwristENMO.model6.id)
+
+jtools::summ(logwristENMO.model6.id.beh)
+
+## Wrist MAD
+logwristMAD.model6 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep"), data = data.pp)
+logwristMAD.model6.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model6, logwristMAD.model6.id, test="Chisq")
+rm(logwristMAD.model6)
+logwristMAD.model6.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior6, ref = "sleep")  + (1 | castorID/behavior6), data = data.pp, REML = TRUE)
+anova(logwristMAD.model6.id, logwristMAD.model6.id.beh, test="Chisq")
+rm(logwristMAD.model6.id)
+
+jtools::summ(logwristMAD.model6.id.beh)
+
+### 7. Playing calm/don't know - standing: SB (model 1) -> PA
+index_calmplay <- which(data.pp$activity == "quietplay")
+index_dontknowplay <- which(data.pp$activity == "dontknowplay")
+index <- union(index_calmplay, index_dontknowplay)
+index_calmdontknowplay_standing <- intersect(index, index_sitting)
+length(index_calmdontknowplay_standing)
+data.pp$behavior7 <- data.pp$behavior
+data.pp$behavior7[index_calmdontknowplay_standing] <- "PA"
+
+## Hip ENMO
+loghipENMO.model7 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep"), data = data.pp)
+loghipENMO.model7.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model7, loghipENMO.model7.id, test="Chisq")
+rm(loghipENMO.model7)
+loghipENMO.model7.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID/behavior7), data = data.pp, REML = TRUE)
+anova(loghipENMO.model7.id, loghipENMO.model7.id.beh, test="Chisq")
+rm(loghipENMO.model7.id)
+
+jtools::summ(loghipENMO.model7.id.beh)
+
+## Hip MAD
+loghipMAD.model7 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep"), data = data.pp)
+loghipMAD.model7.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model7, loghipMAD.model7.id, test="Chisq")
+rm(loghipMAD.model7)
+loghipMAD.model7.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID/behavior7), data = data.pp, REML = TRUE)
+anova(loghipMAD.model7.id, loghipMAD.model7.id.beh, test="Chisq")
+rm(loghipMAD.model7.id)
+
+jtools::summ(loghipMAD.model7.id.beh)
+
+## Wrist ENMO
+logwristENMO.model7 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep"), data = data.pp)
+logwristENMO.model7.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model7, logwristENMO.model7.id, test="Chisq")
+rm(logwristENMO.model7)
+logwristENMO.model7.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID/behavior7), data = data.pp, REML = TRUE)
+anova(logwristENMO.model7.id, logwristENMO.model7.id.beh, test="Chisq")
+rm(logwristENMO.model7.id)
+
+jtools::summ(logwristENMO.model7.id.beh)
+
+## Wrist MAD
+logwristMAD.model7 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep"), data = data.pp)
+logwristMAD.model7.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model7, logwristMAD.model7.id, test="Chisq")
+rm(logwristMAD.model7)
+logwristMAD.model7.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior7, ref = "sleep")  + (1 | castorID/behavior7), data = data.pp, REML = TRUE)
+anova(logwristMAD.model7.id, logwristMAD.model7.id.beh, test="Chisq")
+rm(logwristMAD.model7.id)
+
+jtools::summ(logwristMAD.model7.id.beh)
+
+### 8. Playing calm/don't know - changing: SB (model 1) -> PA
+index_changing <- which(data.pp$posture == "alternating")
+index_calmdontknowplay_changing <- intersect(index, index_changing)
+length(index_calmdontknowplay_changing)
+data.pp$behavior8 <- data.pp$behavior
+data.pp$behavior8[index_calmdontknowplay_changing] <- "PA"
+
+## Hip ENMO
+loghipENMO.model8 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep"), data = data.pp)
+loghipENMO.model8.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model8, loghipENMO.model8.id, test="Chisq")
+rm(loghipENMO.model8)
+loghipENMO.model8.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID/behavior8), data = data.pp, REML = TRUE)
+anova(loghipENMO.model8.id, loghipENMO.model8.id.beh, test="Chisq")
+rm(loghipENMO.model8.id)
+
+jtools::summ(loghipENMO.model8.id.beh)
+
+## Hip MAD
+loghipMAD.model8 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep"), data = data.pp)
+loghipMAD.model8.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model8, loghipMAD.model8.id, test="Chisq")
+rm(loghipMAD.model8)
+loghipMAD.model8.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID/behavior8), data = data.pp, REML = TRUE)
+anova(loghipMAD.model8.id, loghipMAD.model8.id.beh, test="Chisq")
+rm(loghipMAD.model8.id)
+
+jtools::summ(loghipMAD.model8.id.beh)
+
+## Wrist ENMO
+logwristENMO.model8 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep"), data = data.pp)
+logwristENMO.model8.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model8, logwristENMO.model8.id, test="Chisq")
+rm(logwristENMO.model8)
+logwristENMO.model8.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID/behavior8), data = data.pp, REML = TRUE)
+anova(logwristENMO.model8.id, logwristENMO.model8.id.beh, test="Chisq")
+rm(logwristENMO.model8.id)
+
+jtools::summ(logwristENMO.model8.id.beh)
+
+## Wrist MAD
+logwristMAD.model8 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep"), data = data.pp)
+logwristMAD.model8.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model8, logwristMAD.model8.id, test="Chisq")
+rm(logwristMAD.model8)
+logwristMAD.model8.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior8, ref = "sleep")  + (1 | castorID/behavior8), data = data.pp, REML = TRUE)
+anova(logwristMAD.model8.id, logwristMAD.model8.id.beh, test="Chisq")
+rm(logwristMAD.model8.id)
+
+jtools::summ(logwristMAD.model8.id.beh)
+
+### 9. Playing calm: SB (model 1) -> PA
+length(index_calmplay)
+data.pp$behavior9 <- data.pp$behavior
+data.pp$behavior9[index_calmplay] <- "PA"
+
+## Hip ENMO
+loghipENMO.model9 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp)
+loghipENMO.model9.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model9, loghipENMO.model9.id, test="Chisq")
+rm(loghipENMO.model9)
+loghipENMO.model9.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp, REML = TRUE)
+anova(loghipENMO.model9.id, loghipENMO.model9.id.beh, test="Chisq")
+rm(loghipENMO.model9.id)
+
+jtools::summ(loghipENMO.model9.id.beh)
+
+## Hip MAD
+loghipMAD.model9 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp)
+loghipMAD.model9.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model9, loghipMAD.model9.id, test="Chisq")
+rm(loghipMAD.model9)
+loghipMAD.model9.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp, REML = TRUE)
+anova(loghipMAD.model9.id, loghipMAD.model9.id.beh, test="Chisq")
+rm(loghipMAD.model9.id)
+
+jtools::summ(loghipMAD.model9.id.beh)
+
+## Wrist ENMO
+logwristENMO.model9 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp)
+logwristENMO.model9.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model9, logwristENMO.model9.id, test="Chisq")
+rm(logwristENMO.model9)
+logwristENMO.model9.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp, REML = TRUE)
+anova(logwristENMO.model9.id, logwristENMO.model9.id.beh, test="Chisq")
+rm(logwristENMO.model9.id)
+
+jtools::summ(logwristENMO.model9.id.beh)
+
+## Wrist MAD
+logwristMAD.model9 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp)
+logwristMAD.model9.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model9, logwristMAD.model9.id, test="Chisq")
+rm(logwristMAD.model9)
+logwristMAD.model9.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp, REML = TRUE)
+anova(logwristMAD.model9.id, logwristMAD.model9.id.beh, test="Chisq")
+rm(logwristMAD.model9.id)
+
+jtools::summ(logwristMAD.model9.id.beh)
+
+
+### 10. Playing dont know: SB (model 1) -> PA
+length(index_dontknowplay)
+data.pp$behavior10 <- data.pp$behavior
+data.pp$behavior10[index_dontknowplay] <- "PA"
+
+## Hip ENMO
+loghipENMO.model10 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep"), data = data.pp)
+loghipENMO.model10.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipENMO.model10, loghipENMO.model10.id, test="Chisq")
+rm(loghipENMO.model10)
+loghipENMO.model10.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID/behavior10), data = data.pp, REML = TRUE)
+anova(loghipENMO.model10.id, loghipENMO.model10.id.beh, test="Chisq")
+rm(loghipENMO.model10.id)
+
+jtools::summ(loghipENMO.model10.id.beh)
+
+## Hip MAD
+loghipMAD.model10 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep"), data = data.pp)
+loghipMAD.model10.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(loghipMAD.model10, loghipMAD.model10.id, test="Chisq")
+rm(loghipMAD.model10)
+loghipMAD.model10.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID/behavior10), data = data.pp, REML = TRUE)
+anova(loghipMAD.model10.id, loghipMAD.model10.id.beh, test="Chisq")
+rm(loghipMAD.model10.id)
+
+jtools::summ(loghipMAD.model10.id.beh)
+
+## Wrist ENMO
+logwristENMO.model10 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep"), data = data.pp)
+logwristENMO.model10.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristENMO.model10, logwristENMO.model10.id, test="Chisq")
+rm(logwristENMO.model10)
+logwristENMO.model10.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID/behavior10), data = data.pp, REML = TRUE)
+anova(logwristENMO.model10.id, logwristENMO.model10.id.beh, test="Chisq")
+rm(logwristENMO.model10.id)
+
+jtools::summ(logwristENMO.model10.id.beh)
+
+## Wrist MAD
+logwristMAD.model10 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep"), data = data.pp)
+logwristMAD.model10.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+anova(logwristMAD.model10, logwristMAD.model10.id, test="Chisq")
+rm(logwristMAD.model10)
+logwristMAD.model10.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior10, ref = "sleep")  + (1 | castorID/behavior10), data = data.pp, REML = TRUE)
+anova(logwristMAD.model10.id, logwristMAD.model10.id.beh, test="Chisq")
+rm(logwristMAD.model10.id)
+
+jtools::summ(logwristMAD.model10.id.beh)
+
