@@ -23,6 +23,8 @@ for (function_file in dir(my_functions_folder, full.names = T)) source(function_
 
 ## Load app data
 data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data
+data.app.day <- read.csv(paste0(filepath.app, filename.app.day))[which(data.app.day$castorID %in% unique(data.app$castorID)),-1]
+data.app.day <- data.app.day[which(data.app.day$measurement == 1),]
 
 ## Match Axivity data to the app entries
 #run L22 once: then load in data from saved file
@@ -34,11 +36,39 @@ for(pp in 1:length(unique(data.pp$castorID))){
   create.overlayplot(data.app, filepath.hip, filepath.wrist, unique(data.pp$castorID)[pp], savedir)
 }
 
+## Descriptives overlap app - accelerometer
+load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_missing_ax_day_20231031.RData")
+
+missing_app_min <- c()
+data_hip_min <- c()
+data_wrist_min <- c()
+NA_category_min <- c()
+NA_hip_min <- c()
+NA_wrist_min <- c()
+
+for(pp in 1:nrow(missing.app)){
+  missing_app_min <- c(missing_app_min, mean(as.numeric(missing.app[pp,c(2:9)]), na.rm = T))
+  data_hip_min <- c(data_hip_min, mean(as.numeric(missing.app[pp,c(10:17)]), na.rm = T))
+  data_wrist_min <- c(data_wrist_min, mean(as.numeric(missing.app[pp,c(18:25)]), na.rm = T))
+  
+  tmp.act <- data.pp[data.pp$castorID == missing.app$castorID[pp],]
+  tmp.act.na <- tmp.act[which(tmp.act$activity %in% c("someoneelse", "otheractivity", "dontknow")),]
+  NA_category_min <- c(NA_category_min, mean(tmp.act.na$total_duration))
+  NA_hip_min <- c(NA_hip_min, mean(tmp.act.na$acc_min_hip))
+  NA_wrist_min <- c(NA_wrist_min, mean(tmp.act.na$acc_min_wrist))
+}
+
+mean(NA_category_min, na.rm = TRUE)
+mean(NA_hip_min, na.rm = TRUE)
+mean(NA_wrist_min, na.rm = TRUE)
+
+
 #### Rewrite this script from here
+
+
 # Combine data for both placements
 #data.app.axivity$ENMO.both = data.app.axivity$ENMO.hip * data.app.axivity$ENMO.wrist 
 #data.app.axivity$MAD.both = data.app.axivity$MAD.hip * data.app.axivity$MAD.wrist 
-
 
 ## SCATTERPLOTS
 df2 <- dplyr::select(data.app.axivity, -activity)
