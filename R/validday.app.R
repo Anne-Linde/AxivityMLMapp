@@ -40,6 +40,10 @@ validday.app <- function(data, minhours = 8, mindays = 7, savedir, CoDa = TRUE){
       }
     }
   }
+  valid_data$PA[which(is.na(valid_data$PA))] <- 0
+  valid_data$SB[which(is.na(valid_data$SB))] <- 0
+  valid_data$sleep[which(is.na(valid_data$sleep))] <- 0
+  
   if(CoDa == TRUE){
     ilr_transformed <- compositions::ilr(valid_data[,22:24] + 0.001) # Handling zero values in the data before transformation
     colnames(ilr_transformed) <- c("ilr1", "ilr2")
