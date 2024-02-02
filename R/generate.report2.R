@@ -1,3 +1,37 @@
+#'#' generate.report2
+#'
+#' @description 'generate.report2' generates a quality control report for the data in a specified directory. It produces summary plots and data quality metrics for each file in the directory if this was not done in GGIR shell function.
+#'
+#' @param metadatadir The path to the directory containing the metadata.
+#' @return This function does not explicitly return anything, but it generates quality control reports.
+#' @export
+#' 
+#' @examples
+#' # Example usage:
+#' # generate.report2("/path/to/metadata/directory")
+#' 
+#' @import GGIR
+#' @importFrom base try
+#' @importFrom base cat
+#' @importFrom base dev.off
+#' @importFrom base load
+#' @importFrom base write.csv
+#' @importFrom base file.exists
+#' @importFrom base dir
+#' @importFrom base paste
+#' @importFrom base unlist
+#' @importFrom base length
+#' @importFrom base matrix
+#' @importFrom base colnames
+#' @importFrom GGIR g.plot
+#' @importFrom GGIR daySUMMARY
+#' @importFrom GGIR dev.off
+#' @importFrom GGIR pdf
+#' 
+#' #' @references
+#' The GGIR package: https://cran.r-project.org/package=GGIR
+#' 
+#' @keywords data processing
 generate.report2(metadatadir){
   library(GGIR)
   

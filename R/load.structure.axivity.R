@@ -2,15 +2,27 @@
 #'
 #' @description 'load.structure.axivity' Loads the files using GGIR and calculate metrics, structures the milestone data in epoch level data
 #'
-#' @param tz Time zone specification to be used, default "Europe/Amsterdam".
+#' @param tz Time zone specification to be used, default is "Europe/Amsterdam".
 #' @param filepath Path to the root of the accelerometer data.
 #' @param outputdir Path to the root directory in which all milestone data will be saved.
-#' @param validhours Integer that indicates the number of hours for a day to be valid (midnight-midnight), default = 12.
-#' @param epochlength Integer that indicates epoch length in seconds, default = 5.
-#' @param processeddir Path to the directory in which the generated milestone was saved.
-#' @param overwrit Boolean to indicate if existing data needs to be overwritten, default = FALSE
+#' @param validhours Integer indicating the number of hours for a day to be considered valid (midnight-midnight), default is 12.
+#' @param epochlength Integer indicating the epoch length in seconds, default is 5.
+#' @param processeddir Path to the directory in which the generated milestone data is saved.
+#' @param overwrit Logical indicating whether to overwrite existing data, default is FALSE.
+#' 
 #' @import GGIR
 #' @export
+#'
+#' @examples
+#' # Example usage:
+#' # load.structure.axivity(tz = "Europe/Amsterdam", filepath = "/path/to/accelerometer/data", 
+#' #                         outputdir = "/path/to/save/milestone/data", validhours = 12, epochlength = 5, 
+#' #                         processeddir = "/path/to/save/processed/data", overwrit = FALSE)
+#'
+#' @references
+#' The GGIR package: https://cran.r-project.org/package=GGIR
+#'
+#' @keywords data processing, accelerometer, GGIR
 
 load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir, validhours = 12, epochlength = 5, processeddir, overwrit = FALSE){
 
@@ -66,7 +78,6 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
   if (!file.exists(paste0(outputdir, "/epochdata/wrist"))){
     dir.create(file.path(paste0(outputdir, "/epochdata/wrist")))
   }
-  
   
   # Create epochdata
   for(file in 1:length(filelist)){

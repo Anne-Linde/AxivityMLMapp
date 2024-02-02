@@ -1,16 +1,12 @@
-# Function to remove non-wear from data
-# input data is a data.frame object
-
 #' remove.nonwear
 #'
-#' @description 'remove.nonwear' Removes the timestamp data indicated as non-wear
+#' @description 'remove.nonwear' removes timestamp data indicated as non-wear from accelerometer data.
 #'
-#' @param epochdir Path to the root of the accelerometer data aggregated in epochs.
-#' @param epochlength Integer that indicates epoch length in seconds, default = 5.
-#' @param minhours Integer that indicates the minimal recorded hours/day for a day to be considered a valid day, default = 8.
-#' @param mindays Integer that indicates the minimal number of days to be considered valid data, default = 7.
-#' @param savedir Path to the directory where the preprocessed valid data will be stored.
-
+#' @param epochdir.hip Path to the root directory containing hip accelerometer data aggregated in epochs.
+#' @param epochdir.wrist Path to the root directory containing wrist accelerometer data aggregated in epochs.
+#' @param savefolder Subdirectory where the preprocessed valid data will be stored.
+#' @param data.castor Data frame containing information on accelerometer attachment date and time and wear protocol deviations
+#' 
 #' @export
 
 remove.nonwear <- function(epochdir.hip, epochdir.wrist, savefolder, data.castor){
