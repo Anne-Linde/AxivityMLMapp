@@ -1,9 +1,7 @@
 # This script was used for processing the Axivity .cwa files (as described in section 2.8.1.2 of the article)
 
-### Structure the Axivity files into 5-sec epoch data including:
-## 1) data quality check;
-## 2) the metrics roll_med_acc for x, y and z axis, ENMO and MAD;
-## 3) indicator for non-wear detection.
+## 1) Load raw data and convert into 5-sec epoch data;
+## 2) Remove periods of non-wear;
 
 rm(list=ls())
 gc()

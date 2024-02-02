@@ -61,7 +61,8 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
     do.imp = FALSE #skips automatic imputation of missing values
   )
   
-  if(!(file.exists(paste0(processeddir, "/results/part2_daysummary.csv")))){ # Check if report for part 2 GGIR is there
+  # Check if report for part 2 GGIR is there, required for the reliability analysis in which average metric calculations per day were used
+  if(!(file.exists(paste0(processeddir, "/results/part2_daysummary.csv")))){ 
     generate.report2(metadatadir = paste0(processeddir, "/"))
   }
   
