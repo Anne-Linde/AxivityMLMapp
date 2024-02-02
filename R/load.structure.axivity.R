@@ -5,14 +5,14 @@
 #' @param tz Time zone specification to be used, default "Europe/Amsterdam".
 #' @param filepath Path to the root of the accelerometer data.
 #' @param outputdir Path to the root directory in which all milestone data will be saved.
-#' @param validhours Integer that indicates the number of hours for a day to be valid (midnight-midnight), default = 8.
+#' @param validhours Integer that indicates the number of hours for a day to be valid (midnight-midnight), default = 12.
 #' @param epochlength Integer that indicates epoch length in seconds, default = 5.
 #' @param processeddir Path to the directory in which the generated milestone was saved.
 #' @param overwrit Boolean to indicate if existing data needs to be overwritten, default = FALSE
 #' @import GGIR
 #' @export
 
-load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir, validhours = 8, epochlength = 5, processeddir, overwrit = FALSE){
+load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir, validhours = 12, epochlength = 5, processeddir, overwrit = FALSE){
 
   # Load accelerometer files and calculate metrics
   GGIR::GGIR(
@@ -49,6 +49,10 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
     do.imp = FALSE #skips automatic imputation of missing values
   )
   
+  if(!(file.exists(paste0(processeddir, "/results/part2_daysummary.csv")))){ # Check if report for part 2 GGIR is there
+    generate.report2(metadatadir = paste0(processeddir, "/"))
+  }
+  
   # Structure all resulting milestone data into epoch format
   milestonedir <- paste0(processeddir, "/meta/ms2.out")
   filelist <- list.files(milestonedir, pattern = ".RData")
@@ -62,6 +66,7 @@ load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir,
   if (!file.exists(paste0(outputdir, "/epochdata/wrist"))){
     dir.create(file.path(paste0(outputdir, "/epochdata/wrist")))
   }
+  
   
   # Create epochdata
   for(file in 1:length(filelist)){
