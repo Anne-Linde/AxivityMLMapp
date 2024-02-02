@@ -1,7 +1,7 @@
 ---
 title: "Analysis of data requirements"
 author: "Annelinde Lettink"
-date: "29/12/2023"
+date: "02/02/2024"
 output: 
   pdf_document: default
   html_document: default
@@ -19,8 +19,8 @@ filename.castor <- "/20231007/Study/My_Little_Moves_export_20231007.csv"
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
 filename.app <- "/20230918_MLMapp_activiteit_gedrag_duur_per_dag.csv"
 # Directory path for epochdata hip and wrist
-epochdir.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/hip/nonwear_removed"
-epochdir.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/wrist/nonwear_removed"
+epochdir.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/hip/nonwear_removed"
+epochdir.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/wrist/nonwear_removed"
 
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/reliability/"
 
@@ -36,6 +36,7 @@ data.castor <- load.castor(filepath.castor, filename.castor, cohort = c(3))
 library(dplyr)
 library(psych)
 library(CTT)
+library(compositions)
 ```
 
 ### Determine criteria for generation of reliable estimates
@@ -48,18 +49,308 @@ In this script, [description here]
 # Load app data for all cohorts
 data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementperiod = 1, sep = ";")
 # Note 98MLM027 (wrong in Castor, code was used by 98MLM028 adjusted at 2023-10-10 but not yet in export, this subj. was excluded so use the following lines L63-64 for exclusion of data)
-index <- which(data.app$castorID == "98MLM027")
+# 04MLM004 born <31 weeks
+index <- which(data.app$castorID %in% c("04MLM004", "98MLM027"))
 data.app <- data.app[-index,] # Remove rows
-# Calculate isometric log ratios
-data.app <- cbind(data.app, compositions::ilr(data.app[,22:24]))
 
 # Number of participants at start
 paste0("number of participants: ", length(unique(data.app$castorID)))
 
 # Select files that provide => 8 hours on => 2 day
-valid_data_8h2d <- validday.app(data.app, minhours = 8, mindays = 2, savedir = filepath.app) 
-paste0("participants provide => 8 h on => 2 day: ", length(unique(valid_data_8h2d$castorID)), "(", length(unique(valid_data_8h2d$castorID))/length(unique(data.app$castorID))*100, " %)")
+valid_data_12h2d <- validday.app(data.app, minhours = 12, mindays = 2, CoDa = TRUE, savedir = filepath.app) 
+paste0("participants provide => 12 h on => 2 day: ", length(unique(valid_data_12h2d$castorID)), "(", length(unique(valid_data_12h2d$castorID))/length(unique(data.app$castorID))*100, " %)")
 ```
+
+```{r Week weekend variability MLM app, echo=FALSE}
+# Examine differences between week and weekend days
+
+outcomes <- c("PA", "SB", "sleep", "ilr1", "ilr2")
+hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
+
+week_weekend_differences <- data.frame()
+counter = 1
+
+for(h in 1: length(hours)){
+  # Load in data
+  data <- validday.app(data.app, minhours = hours[h], mindays = 2, savedir = filepath.app, CoDa = TRUE) 
+  # Random sample data of participants to at least one weekend and one week day
+  WKWKND <- data.frame()
+  for(pp in 1:length(unique(data$castorID))){
+    tmp <- data[data$castorID == unique(data$castorID)[pp],]
+    if(length(unique(tmp$weekenddag)) == 2){
+      WKWKND <- rbind(WKWKND, tmp)
+    }
+  }
+  for(out in 1:length(outcomes)){
+    week_weekend_differences[counter, 1] <- hours[h]
+    week_weekend_differences[counter, 2] <- outcomes[out]
+    col <- which(colnames(WKWKND) == outcomes[out])
+
+    if(outcomes[out] %in% c("PA", "SB", "sleep")){
+      week_weekend_differences[counter, 3] <- median(unlist(subset(WKWKND, weekenddag == 0)[col]), na.rm = T)
+      week_weekend_differences[counter, 4] <- quantile(unlist(subset(WKWKND, weekenddag == 0)[col]), probs = 0.25, na.rm = T)
+      week_weekend_differences[counter, 5] <- quantile(unlist(subset(WKWKND, weekenddag == 0)[col]), probs = 0.75, na.rm = T)
+      week_weekend_differences[counter, 6] <- median(unlist(subset(WKWKND, weekenddag == 1)[col]), na.rm = T)
+      week_weekend_differences[counter, 7] <- quantile(unlist(subset(WKWKND, weekenddag == 1)[col]), probs = 0.25, na.rm = T)
+      week_weekend_differences[counter, 8] <- quantile(unlist(subset(WKWKND, weekenddag == 1)[col]), probs = 0.75, na.rm = T)
+      week_weekend_differences[counter, c(9:12)] <- NA
+      if(outcomes[out] == "PA"){
+          differences <- lme4::lmer(log(PA + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F) } 
+      else if(outcomes[out] == "SB"){
+          differences <- lme4::lmer(log(SB + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F) } 
+      else{
+          differences <- lme4::lmer(log(sleep + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F)
+       }
+    
+    } else {
+      week_weekend_differences[counter, c(3:8)] <- NA
+      week_weekend_differences[counter, 9] <- mean(unlist(subset(data, weekenddag == 0)[col]), na.rm = T)
+      week_weekend_differences[counter, 10] <- sd(unlist(subset(data, weekenddag == 0)[col]), na.rm = T)
+      week_weekend_differences[counter, 11] <- mean(unlist(subset(data, weekenddag == 1)[col]), na.rm = T)
+      week_weekend_differences[counter, 12] <- sd(unlist(subset(data, weekenddag == 1)[col]), na.rm = T)
+      if(outcomes[out] == "ilr1"){
+        differences <- lme4::lmer(ilr1 ~ weekenddag + (1 | castorID), WKWKND, REML = F) }
+      else{
+        differences <- lme4::lmer(ilr2 ~ weekenddag + (1 | castorID), WKWKND, REML = F) }
+    }
+    test <- car::Anova(differences)
+    week_weekend_differences[counter, 13] <- test$`Pr(>Chisq)`
+    counter = counter + 1
+  }
+  colnames(week_weekend_differences) <- c("hours", "outcome", "Median_week", "Q1_week", "Q3_week", "Median_weekend", "Q1_weekend", "Q3_weekend", "Mean_week", "sd_week", "Mean_weekend", "sd_weekend", "p_value")
+}
+
+save(week_weekend_differences, file = paste0(savedir, "MLMapp/week_weekend.RData")) # Save week weekend difference tests
+write.csv(week_weekend_differences, file = paste0(savedir, "MLMapp/week_weekend.csv"))
+
+```
+
+```{r Single day ICCs MLM app all criteria, include = FALSE}
+days <- c(2, 3, 4, 5, 6, 7)
+hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
+n.pp <- data.frame()
+temp.icc <- data.frame(ncol(3))
+day <- c()
+hour <- c()
+outcome <- c()
+repetition <- c()
+count = 0
+result_data <- data.frame()
+
+# For all valid wear criteria
+for(d in 1:length(days)){
+  for(h in 1: length(hours)){
+    # if(file.exists(paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d.RData"))){
+    #   load(paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d.RData"))
+    #   data <- valid_data
+    #   rm(valid_data)
+    # } else {
+      data <- validday.app(data.app, minhours = hours[h], mindays = days[d], savedir = filepath.app, CoDa = TRUE) 
+    # }
+    
+    cat(paste0("participants provide at least ", hours[h], " hours on ", days[d], " days: ", ... = length(unique(data$castorID)), "(", length(unique(data$castorID))/length(unique(data.app$castorID))*100, " %)", "/n"))
+    n.pp[d, h] <- length(unique(data$castorID))
+    temp <- cbind(data$castorID, data$weekenddag, data$dag, data[,22:26])
+    colnames(temp) <- c("id", "weekendday", "day", "PA", "SB", "sleep", "ilr1", "ilr2")
+    temp$id <- as.factor(temp$id)
+    temp$weekendday <- as.factor(temp$weekendday)
+    temp$day <- as.factor(temp$day)
+
+    #Select random number of days, repeat this five times and save the average single day ICC.
+    ndays <- rep(1:days[d], length(unique(temp$id)))
+    ntimes = 5 #42 number permutations from 2 out 7
+    for(variable in 4:ncol(temp)){ #Calculate the mean ICC for each outcome
+      outcome <- c(outcome, colnames(temp)[variable])
+      count = count + 1
+      temp.icc_temp <- data.frame()
+      for(rep in 1:ntimes){
+        repetition <- c(repetition, rep)
+        
+        if(week_weekend_differences$p_value[which(week_weekend_differences$hours == hours[h] & week_weekend_differences$outcome == colnames(temp)[variable])] < .05){ # If there are differences between week and weekend days
+            sample <- temp %>% group_by(id, weekendday) %>% slice_sample(n = days[d]-1) # Include at least one weekend day
+        } else{
+            sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
+        }
+
+        var.icc <- data.frame()
+        #sample[which(is.na(sample[,variable])), variable] <- 0
+        temp.var <- cbind(sample$id,  rep(1:days[d], nrow(sample)), sample[,variable])
+        colnames(temp.var) <- c("id", "day", "outcome")
+          
+        # Create matrix as input for days (cols) and participants (rows) containing the variable values
+        m <- reshape(temp.var, idvar = "id", timevar = "day", direction = "wide")
+
+        if(variable == 3 | variable == 4 | variable == 5){
+          n <- log(m[,2:ncol(m)] + 0.001)
+          m <- cbind(m[,1], n)
+        }
+        
+        # Calculate ICC
+        icc <- psych::ICC(m[,-1])$results[2,]
+        temp.icc_temp <- rbind(temp.icc_temp, c(icc$ICC, icc$`lower bound`, icc$`upper bound`))
+      }
+      temp.icc <- rbind(temp.icc, colMeans(temp.icc_temp))
+      day <- c(day, days[d])
+      hour <- c(hour, hours[h])
+
+      cat("Outcome: ", paste0(colnames(sample)[variable], ": ICC ", hours[h], " hours ", days[d], " days: ", colMeans(temp.icc_temp)))
+    }
+  }
+}
+
+temp.icc <- cbind(hour, day, outcome, temp.icc)
+colnames(temp.icc) <- c("hour", "day", "outcome", "ICC", "LB", "UB")
+
+write.table(n.pp, file = paste0(savedir, "MLMapp/reliability_sample_size.txt"), sep = ",", quote = FALSE, row.names = F)
+write.csv(temp.icc, file = paste0(savedir, "MLMapp/ICC_SpearmanBrown.csv"))
+
+save(temp.icc, file = paste0(savedir, "MLMapp/ICC_SpearmanBrown.RData")) # Save data that meets the valid day criterion
+
+```
+
+```{r Average ICCs MLM app wear time hours Spearman-Brown, echo=FALSE}
+hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
+temp.icc.PA <- temp.icc[which(temp.icc$outcome == "PA"),]
+temp.icc.SB <- temp.icc[which(temp.icc$outcome == "SB"),]
+temp.icc.sleep <- temp.icc[which(temp.icc$outcome == "sleep"),]
+temp.icc.ilr1 <- temp.icc[which(temp.icc$outcome == "ilr1"),]
+temp.icc.ilr2 <- temp.icc[which(temp.icc$outcome == "ilr2"),]
+
+ICC.PA <- data.frame()
+ICC.SB <- data.frame()
+ICC.sleep <- data.frame()
+ICC.ilr1 <- data.frame()
+ICC.ilr2 <- data.frame()
+sb.PA <- c()
+sb.SB <- c()
+sb.sleep <- c()
+sb.ilr1 <- c()
+sb.ilr2 <- c()
+
+# Averages for all day criteria
+for(h in 1:length(hours)){
+
+  ICC.PA <- rbind(ICC.PA, colMeans(temp.icc.PA[which(temp.icc.PA$hour == hours[h]),4:6]))
+  sb.PA <- c(sb.PA, CTT::spearman.brown(ICC.PA[h,1], .7, "r")[[1]])
+  ICC.SB <- rbind(ICC.SB, colMeans(temp.icc.SB[which(temp.icc.SB$hour == hours[h]),4:6]))
+    sb.SB <- c(sb.SB, CTT::spearman.brown(ICC.SB[h,1], .7, "r")[[1]])
+  ICC.sleep <- rbind(ICC.sleep, colMeans(temp.icc.sleep[which(temp.icc.sleep$hour == hours[h]),4:6]))
+    sb.sleep <- c(sb.sleep, CTT::spearman.brown(ICC.sleep[h,1], .7, "r")[[1]])
+  ICC.ilr1 <- rbind(ICC.ilr1, colMeans(temp.icc.ilr1[which(temp.icc.ilr1$hour == hours[h]),4:6]))
+    sb.ilr1 <- c(sb.ilr1, CTT::spearman.brown(ICC.ilr1[h,1], .7, "r")[[1]])
+  ICC.ilr2 <- rbind(ICC.ilr2, colMeans(temp.icc.ilr2[which(temp.icc.ilr2$hour == hours[h]),4:6]))
+sb.ilr2 <- c(sb.ilr2, CTT::spearman.brown(ICC.ilr2[h,1], .7, "r")[[1]])
+}
+
+rownames(ICC.PA) <- hours
+ICC.PA <- cbind(ICC.PA, sb.PA)
+colnames(ICC.PA) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.PA, file = paste0(savedir, "MLMapp/ICC_Spearman_PA.csv"))
+
+ICC.SB <- cbind(ICC.SB, sb.SB)
+colnames(ICC.SB) <- c("ICC", "LB", "UB", "SB70")
+rownames(ICC.SB) <- hours
+write.csv(ICC.SB, file = paste0(savedir, "MLMapp/ICC_Spearman_SB.csv"))
+
+rownames(ICC.sleep) <- hours
+ICC.sleep <- cbind(ICC.sleep, sb.sleep)
+colnames(ICC.sleep) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.sleep, file = paste0(savedir, "MLMapp/ICC_Spearman_sleep.csv"))
+
+rownames(ICC.ilr1) <- hours
+ICC.ilr1 <- cbind(ICC.ilr1, sb.ilr1)
+colnames(ICC.ilr1) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilr1, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr1.csv"))
+
+rownames(ICC.ilr2) <- hours
+ICC.ilr2 <- cbind(ICC.ilr2, sb.ilr2)
+colnames(ICC.ilr2) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilr2, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr2.csv"))
+```
+
+## Accelerometers
+
+```{r Load Axivity data, echo=FALSE}
+# Number of accelerometer files at start
+filelist.hip <- list.files(epochdir.hip, pattern = ".RData")
+filelist.wrist <- list.files(epochdir.wrist, pattern = ".RData")
+paste0("accelerometer files hip: ", length(filelist.hip))
+paste0("accelerometer files wrist: ", length(filelist.wrist))
+
+# Select files that provide => 12 hours on at least two days
+savedir.hip <- paste0(epochdir.hip, "/2d12h")
+validday.axivity(epochdir.hip, epochlength = 5, minhours = 12, mindays = 2, savedir = savedir.hip, data.castor)
+savedir.wrist <- paste0(epochdir.wrist, "/2d12h")
+validday.axivity(epochdir.wrist, epochlength = 5, minhours = 12, mindays = 2, savedir = savedir.wrist, data.castor)
+paste0("hip: accelerometer files that provide at least 12 h on 2 days: ", length(list.files(savedir.hip, pattern = ".RData")), "(", length(list.files(savedir.hip, pattern = ".RData"))/length(filelist.hip)*100, " %)")
+paste0("wrist: accelerometer files that provide at least 12 h on 2 days: ", length(list.files(savedir.wrist, pattern = ".RData")), "(", length(list.files(savedir.wrist, pattern = ".RData"))/length(filelist.wrist)*100, " %)")
+```
+
+
+```{r Week weekend variability MLM app, echo=FALSE}
+# Examine differences between week and weekend days
+
+outcomes <- c("PA", "SB", "sleep", "ilr1", "ilr2")
+hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
+
+week_weekend_differences <- data.frame()
+counter = 1
+
+for(h in 1: length(hours)){
+  # Load in data
+  data <- validday.app(data.app, minhours = hours[h], mindays = 2, savedir = filepath.app, CoDa = TRUE) 
+  # Random sample data of participants to at least one weekend and one week day
+  WKWKND <- data.frame()
+  for(pp in 1:length(unique(data$castorID))){
+    tmp <- data[data$castorID == unique(data$castorID)[pp],]
+    if(length(unique(tmp$weekenddag)) == 2){
+      WKWKND <- rbind(WKWKND, tmp)
+    }
+  }
+  for(out in 1:length(outcomes)){
+    week_weekend_differences[counter, 1] <- hours[h]
+    week_weekend_differences[counter, 2] <- outcomes[out]
+    col <- which(colnames(WKWKND) == outcomes[out])
+
+    if(outcomes[out] %in% c("PA", "SB", "sleep")){
+      week_weekend_differences[counter, 3] <- median(unlist(subset(WKWKND, weekenddag == 0)[col]), na.rm = T)
+      week_weekend_differences[counter, 4] <- quantile(unlist(subset(WKWKND, weekenddag == 0)[col]), probs = 0.25, na.rm = T)
+      week_weekend_differences[counter, 5] <- quantile(unlist(subset(WKWKND, weekenddag == 0)[col]), probs = 0.75, na.rm = T)
+      week_weekend_differences[counter, 6] <- median(unlist(subset(WKWKND, weekenddag == 1)[col]), na.rm = T)
+      week_weekend_differences[counter, 7] <- quantile(unlist(subset(WKWKND, weekenddag == 1)[col]), probs = 0.25, na.rm = T)
+      week_weekend_differences[counter, 8] <- quantile(unlist(subset(WKWKND, weekenddag == 1)[col]), probs = 0.75, na.rm = T)
+      week_weekend_differences[counter, c(9:12)] <- NA
+      if(outcomes[out] == "PA"){
+          differences <- lme4::lmer(log(PA + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F) } 
+      else if(outcomes[out] == "SB"){
+          differences <- lme4::lmer(log(SB + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F) } 
+      else{
+          differences <- lme4::lmer(log(sleep + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F)
+       }
+    
+    } else {
+      week_weekend_differences[counter, c(3:8)] <- NA
+      week_weekend_differences[counter, 9] <- mean(unlist(subset(data, weekenddag == 0)[col]), na.rm = T)
+      week_weekend_differences[counter, 10] <- sd(unlist(subset(data, weekenddag == 0)[col]), na.rm = T)
+      week_weekend_differences[counter, 11] <- mean(unlist(subset(data, weekenddag == 1)[col]), na.rm = T)
+      week_weekend_differences[counter, 12] <- sd(unlist(subset(data, weekenddag == 1)[col]), na.rm = T)
+      if(outcomes[out] == "ilr1"){
+        differences <- lme4::lmer(ilr1 ~ weekenddag + (1 | castorID), WKWKND, REML = F) }
+      else{
+        differences <- lme4::lmer(ilr2 ~ weekenddag + (1 | castorID), WKWKND, REML = F) }
+    }
+    test <- car::Anova(differences)
+    week_weekend_differences[counter, 13] <- test$`Pr(>Chisq)`
+    counter = counter + 1
+  }
+  colnames(week_weekend_differences) <- c("hours", "outcome", "Median_week", "Q1_week", "Q3_week", "Median_weekend", "Q1_weekend", "Q3_weekend", "Mean_week", "sd_week", "Mean_weekend", "sd_weekend", "p_value")
+}
+
+save(week_weekend_differences, file = paste0(savedir, "MLMapp/week_weekend.RData")) # Save week weekend difference tests
+write.csv(week_weekend_differences, file = paste0(savedir, "MLMapp/week_weekend.csv"))
+
+```
+
 
 ```{r Single day ICCs MLM app all criteria, include = FALSE}
 days <- c(2, 3, 4, 5, 6, 7)
@@ -92,7 +383,6 @@ for(d in 1:length(days)){
     temp$day <- as.factor(temp$day)
 
     #Select random number of days, repeat this five times and save the average single day ICC.
-    ndays <- rep(1:days[d], length(unique(temp$id)))
     ntimes = 5 #42 number permutations from 2 out 7
     for(variable in 3:ncol(temp)){ #Calculate the mean ICC for each outcome
       outcome <- c(outcome, colnames(temp)[variable])
@@ -187,74 +477,6 @@ colnames(ICC.ilr2) <- c("ICC", "LB", "UB", "SB70")
 ```
 
 
-```{r Heatmaps for required number of days MLM app}
-for(outcomes in 1:length(unique(temp.icc$outcome))){
-  temp <- temp.icc[which(temp.icc$outcome == unique(temp.icc$outcome)[outcomes]),]
-  heatmap_colors <- cut(temp$rel, breaks = c(0, 0.70, 1), labels = c("red", "green"))
-  heatmap <- ggplot2::ggplot(temp, ggplot2::aes(x = hour, y = day, fill = rel)) +
-  ggplot2::geom_tile(color = "white") +
-  #ggplot2::scale_fill_manual(values = c(red = "red", green = "green")) +
-  ggplot2::geom_text(ggplot2::aes(label = round(rel*100, 1)), color = "black", size = 2) +
-  ggplot2::labs(x = "Number of hours", y = "Number of days") +
-  ggplot2::theme_minimal() +
-  ggplot2::scale_x_continuous(breaks = round(unique(temp$hour))) +  
-  ggplot2::scale_y_continuous(breaks = round(unique(temp$day))) 
-print(heatmap)
-ggplot2::ggsave(filename = paste0(savedir, "MLMapp/reliability_", unique(temp.icc$outcome)[outcomes], ".jpeg"), plot = heatmap, width = 10, height = 8, units = "in", dpi = 300)
-}
-```
-
-```{r Calculate total registered time in days per participant MLM app}
-registeredtime <- c()
-for(row in 1:nrow(valid_data_8h2d)){
-  registeredtime <- c(registeredtime, (sum(valid_data_8h2d$PA[row], valid_data_8h2d$SB[row],
-                                           valid_data_8h2d$sleep[row], 
-                                           na.rm = TRUE) + 5) / 60)
-}
-valid_data_8h2d <- cbind(valid_data_8h2d, registeredtime)
-
-registereddays <- aggregate(registeredtime~castorID, valid_data_8h2d, sum, na.rm= TRUE)
-registereddays <- cbind(registereddays, registereddays$registeredtime/24)
-
-number_achieve_valid_day_criterion <- function(data, days) {
-  number <- length(which(data$`registereddays$registeredtime/24` >= days))
-  paste0("number of participants: ", number, "   ", "%: ", number/length(unique(data$castorID))*100)
-}
-```
-
-## Accelerometers
-
-```{r Load Axivity data, echo=FALSE}
-# Number of accelerometer files at start
-filelist.hip <- list.files(epochdir.hip, pattern = ".RData")
-filelist.wrist <- list.files(epochdir.wrist, pattern = ".RData")
-paste0("accelerometer files hip: ", length(filelist.hip))
-paste0("accelerometer files wrist: ", length(filelist.wrist))
-
-# Select files that provide => 8 hours on one day
-savedir.hip <- paste0(epochdir.hip, "/1d8h")
-validday.axivity(epochdir.hip, epochlength = 5, minhours = 8, mindays = 1, savedir = savedir.hip, data.castor) 
-savedir.wrist <- paste0(epochdir.wrist, "/1d8h")
-validday.axivity(epochdir.wrist, epochlength = 5, minhours = 8, mindays = 1, savedir = savedir.wrist, data.castor)
-paste0("hip: accelerometer files that provide at least 8 h on 1 day: ", length(list.files(savedir.hip, pattern = ".RData")), "(", length(list.files(savedir.hip, pattern = ".RData"))/length(filelist.hip)*100, " %)")
-paste0("wrist: accelerometer files that provide at least 8 h on 1 day: ", length(list.files(savedir.wrist, pattern = ".RData")), "(", length(list.files(savedir.wrist, pattern = ".RData"))/length(filelist.wrist)*100, " %)")
-
-# # Select files that provide => 8 hours on two days
-# savedir.hip <- paste0(epochdir.hip, "/2d8h")
-# validday.axivity(epochdir.hip, epochlength = 5, minhours = 8, mindays = 2, savedir = savedir.hip, data.castor) 
-# savedir.wrist <- paste0(epochdir.wrist, "/2d8h")
-# validday.axivity(epochdir.wrist, epochlength = 5, minhours = 8, mindays = 2, savedir = savedir.wrist, data.castor)
-# paste0("hip: accelerometer files that provide at least 8 h on 2 days: ", length(list.files(savedir.hip, pattern = ".RData")), "(", length(list.files(savedir.hip, pattern = ".RData"))/length(filelist.hip)*100, " %)")
-# paste0("wrist: accelerometer files that provide at least 8 h on 2 days: ", length(list.files(savedir.wrist, pattern = ".RData")), "(", length(list.files(savedir.wrist, pattern = ".RData"))/length(filelist.wrist)*100, " %)")
-
-## Generate the outcomes per accelerometer recording (per day)
-axivity.estimates.hip <- estimates.axivity(savedir.hip) 
-axivity.estimates.wrist <- estimates.axivity(savedir.wrist)
-#axivity.estimates.hip <- estimates.axivity(savedir.hip, filter_sleep = TRUE) 
-#axivity.estimates.wrist <- estimates.axivity(savedir.wrist, filter_sleep = TRUE)
-
-```
-
 ```{r Spearman-brown accelerometers}
 sb7 <- c()
 sb8 <- c()
@@ -316,157 +538,6 @@ axivity.estimates.wrist <- estimates.axivity(savedir.wrist)
 #axivity.estimates.wrist <- estimates.axivity(savedir.wrist, filter_sleep = TRUE)
 ```
 
-```{r Step 2 Axivity estimates per milestone group, echo=FALSE}
-# Generate per milestone group (no crawl, crawl and walk) as it is expected that the accelerometers record different accelerations
-
-milestones <- load.app(filepath.app, "/20230918_motormilestones_castor_linked.csv", cohort = c(3), measurementperiod = 1, sep = ",") # Load milestone data
-
-# Generate milestone indicators for hip and wrist
-pp.hip <- unique(axivity.estimates.hip$id)
-pp.wrist <- unique(axivity.estimates.wrist$id)
-pp <- pp.hip
-crawl <- c()
-walk <- c()
-counter = 1
-for(subj in 1:(length(pp.hip)+length(pp.wrist))) { # For each subject
-  tmp <- milestones[milestones$castorID==pp[counter],] # Select the milestone data
-  if(nrow(tmp)>0){
-    if(tmp$age.group == 5 || tmp$age.group== 4){ #if child is 2-4 years old, assume ability to crawl and walk
-    crawl <- c(crawl, 1)
-    walk <- c(walk, 1)
-  } else if(tmp$age.group == 1) { # It the child is 0-6 months, assume the child cannot walk and ask whether the child can crawl
-    walk <- c(walk, 0)
-    if(tmp$crawl == 1){
-      crawl <- c(crawl, 1)
-    } else {crawl <- c(crawl, 0)}  } 
-  else { # For children between 6 and 24 months ask if child is able to crawl and/or walk
-    if(tmp$crawl == 1){
-      crawl <- c(crawl, 1)
-    } else {crawl <- c(crawl, 0)}
-    if(tmp$walk == 1){
-      walk <- c(walk, 1)
-    } else {walk <- c(walk, 0)}
-  }
-  } else {
-        walk <- c(walk, NA)
-        crawl <- c(crawl, NA)
-  }
-  
-  counter = counter + 1
-  if(subj == length(pp.hip)){
-    tmp.hip <- as.data.frame(cbind(pp, crawl, walk))
-    pp <- pp.wrist
-    crawl <- c()
-    walk <- c()
-    counter = 1
-  }
-}
-tmp.wrist <- as.data.frame(cbind(pp, crawl, walk))
-
-R.nocrawl.hip <- tmp.hip$pp[which(tmp.hip$crawl == 0 & tmp.hip$walk == 0)]
-R.crawl.hip <- tmp.hip$pp[which(tmp.hip$crawl == 1 & tmp.hip$walk == 0)]
-R.walk.hip <- tmp.hip$pp[which(tmp.hip$crawl == 1 & tmp.hip$walk == 1)]
-print(paste0("Hip: ", length(R.nocrawl.hip), " children do not crawl yet"))
-print(paste0("Hip: ", length(R.crawl.hip), " children can crawl but not walk"))
-print(paste0("Hip: ", length(R.walk.hip), " children can walk"))
-
-R.nocrawl.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 0 & tmp.wrist$walk == 0)]
-R.crawl.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 0)]
-R.walk.wrist <- tmp.wrist$pp[which(tmp.wrist$crawl == 1 & tmp.wrist$walk == 1)]
-print(paste0("Wrist: ", length(R.nocrawl.wrist), " children do not crawl yet"))
-print(paste0("Wrist: ", length(R.crawl.wrist), " children can crawl but not walk"))
-print(paste0("Wrist: ", length(R.walk.wrist), " children can walk"))
-
-print(paste0("Hip * Wrist: ", length(intersect(R.nocrawl.hip, R.nocrawl.wrist)), " children do not crawl yet"))
-print(paste0("Hip * Wrist: ", length(intersect(R.crawl.hip, R.crawl.wrist)), " children can crawl but not walk"))
-print(paste0("Hip * Wrist: ", length(intersect(R.walk.hip, R.walk.wrist)), " children can walk"))
-
-
-# Estimates not walking vs. walking
-
-# Hip
-estimates.notwalk.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% c(R.nocrawl.hip, R.crawl.hip)) 
-estimates.walk.hip <- subset(axivity.estimates.hip, subset=axivity.estimates.hip$id %in% R.walk.hip) 
-#Wrist
-estimates.notwalk.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% c(R.nocrawl.wrist, R.crawl.wrist))
-estimates.walk.wrist <- subset(axivity.estimates.wrist, subset=axivity.estimates.wrist$id %in% R.walk.wrist) 
-#Both
-# Merge the estimate date.frames for hip and wrist, then calculate the metrics
-estimates.notwalk.both <- merge(estimates.notwalk.hip, estimates.notwalk.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
-estimates.notwalk.both$ENMO.both <- estimates.notwalk.both$ENMO.x * estimates.notwalk.both$ENMO.y
-estimates.notwalk.both$MAD.both <- estimates.notwalk.both$MAD.x * estimates.notwalk.both$MAD.y
-estimates.walk.both <- merge(estimates.walk.hip, estimates.walk.wrist, by = c("id", "date", "days", "weekday")) # Merge the estimate date.frames for hip and wrist, then calculate the metrics
-estimates.walk.both$ENMO.both <- estimates.walk.both$ENMO.x * estimates.walk.both$ENMO.y
-estimates.walk.both$MAD.both <- estimates.walk.both$MAD.x * estimates.walk.both$MAD.y
-
-rm(tmp, R.nocrawl.hip, R.crawl.hip, R.walk.hip, tmp.hip, R.nocrawl.wrist, R.crawl.wrist, R.walk.wrist, tmp.wrist, milestones, counter, crawl, walk, pp, pp.hip, pp.wrist, subj)
-```
-
-# My Little Moves app
-
-```{r Step 2 MLM app, echo=FALSE}
-valid_data_16h7d <- validday.app(data.app, minhours = 16, mindays = 7, savedir = filepath.app) 
-paste0("participants provide at least 16 h on 7 day: ", length(unique(valid_data_16h7d$castorID)), "(", length(unique(valid_data_16h7d$castorID))/length(unique(valid_data_8h1d$castorID))*100, " %)")
-
-# Apply the 70/80 rule
-minimumtime <- apply.7080rule(method = "app", data.app = valid_data_8h1d)
-paste0("minimum time app: ", minimumtime, " min (", minimumtime/60, " h)")
-```
-
-```{r Descriptive statistics, echo=FALSE}
-## My Little Moves app
-# Create a data frame with time spent in activities
-app_data <- data.frame(
-  PA = valid_data_16h7d$PA,
-  SB = valid_data_16h7d$SB,
-  sleep = valid_data_16h7d$sleep
-)
-# Perform ilr transformation
-ilr_transformed <- compositions::ilr(app_data)
-colnames(ilr_transformed) <- c("ilr1", "ilr2")
-valid_data_16h7d <- cbind(valid_data_16h7d, ilr_transformed)
-
-quantile(valid_data_16h7d$PA, na.rm = TRUE)
-quantile(valid_data_16h7d$SB, na.rm = TRUE)
-quantile(valid_data_16h7d$sleep, na.rm = TRUE)
-mean(valid_data_16h7d$ilr1, na.rm = TRUE)
-sd(valid_data_16h7d$ilr1, na.rm = TRUE)
-mean(valid_data_16h7d$ilr2, na.rm = TRUE)
-sd(valid_data_16h7d$ilr2, na.rm = TRUE)
-
-## Axivity
-# Hip placement
-quantile(axivity.estimates.hip$ENMO, na.rm = TRUE)
-quantile(axivity.estimates.hip$ENMO_25, na.rm = TRUE)
-quantile(axivity.estimates.hip$ENMO_75, na.rm = TRUE)
-quantile(axivity.estimates.hip$ENMO_25_duration, na.rm = TRUE)
-quantile(axivity.estimates.hip$ENMO_50_duration, na.rm = TRUE)
-quantile(axivity.estimates.hip$ENMO_75_duration, na.rm = TRUE)
-quantile(axivity.estimates.hip$MAD, na.rm = TRUE)
-quantile(axivity.estimates.hip$MAD_25, na.rm = TRUE)
-quantile(axivity.estimates.hip$MAD_75, na.rm = TRUE)
-quantile(axivity.estimates.hip$MAD_25_duration, na.rm = TRUE)
-quantile(axivity.estimates.hip$MAD_50_duration, na.rm = TRUE)
-quantile(axivity.estimates.hip$MAD_75_duration, na.rm = TRUE)
-
-# Wrist placement
-quantile(axivity.estimates.wrist$ENMO, na.rm = TRUE)
-quantile(axivity.estimates.wrist$ENMO_25, na.rm = TRUE)
-quantile(axivity.estimates.wrist$ENMO_75, na.rm = TRUE)
-quantile(axivity.estimates.wrist$ENMO_25_duration, na.rm = TRUE)
-quantile(axivity.estimates.wrist$ENMO_50_duration, na.rm = TRUE)
-quantile(axivity.estimates.wrist$ENMO_75_duration, na.rm = TRUE)
-quantile(axivity.estimates.wrist$MAD, na.rm = TRUE)
-quantile(axivity.estimates.wrist$MAD_25, na.rm = TRUE)
-quantile(axivity.estimates.wrist$MAD_75, na.rm = TRUE)
-quantile(axivity.estimates.wrist$MAD_25_duration, na.rm = TRUE)
-quantile(axivity.estimates.wrist$MAD_50_duration, na.rm = TRUE)
-quantile(axivity.estimates.wrist$MAD_75_duration, na.rm = TRUE)
-```
-
-## Step 3: Determine the inclusion of a weekend day
-
-# Axivity
 
 ```{r Step 3 Axivity, echo=FALSE}
 library(dplyr)
@@ -709,43 +780,7 @@ paste0("hip*wrist walking MAD: Zscore =" ,z_MAD.both, ", p-value = ", res_MAD.bo
 rm(desc.weekend.hip, res_ENMO.hip, z_ENMO.hip, res_MAD.hip, z_MAD.hip, desc.weekend.wrist, res_ENMO.wrist, z_ENMO.wrist, res_MAD.wrist, z_MAD.wrist, desc.weekend.both, res_ENMO.both, z_ENMO.both, res_MAD.both, z_MAD.both)
 ```
 
-# My Little Moves app
 
-```{r Step 3 MLM app, echo=FALSE}
-## Step 3: Weekend day inclusion?
-# Descriptives
-library(dplyr)
-desc.weekend.app <- group_by(valid_data_16h7d, weekenddag) %>% 
-  summarise_at(c("PA", "SB", "sleep"),
-               list(median = median, IQR = quantile), na.rm = TRUE)
-desc.weekend.app[c(2,4,7,9),]
-
-desc.weekend.app2 <- group_by(valid_data_16h7d, weekenddag) %>% 
-  summarise_at(c("ilr1", "ilr2"),
-               list(mean = mean, sd = sd), na.rm = TRUE)
-#Tests
-res_PA <- wilcox.test(PA ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
-z_PA <- qnorm(res_PA$p.value/2)
-paste0("PA: Zscore =" ,z_PA, ", p-value = ", res_PA$p.value)
-
-res_SB <- wilcox.test(SB ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
-z_SB <- qnorm(res_SB$p.value/2)
-paste0("SB: Zscore =" , z_SB, ", p-value = ", res_SB$p.value)
-
-res_sleep <- wilcox.test(sleep ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
-z_sleep <- qnorm(res_sleep$p.value/2)
-paste0("Sleep: Zscore =" , z_sleep, ", p-value = ", res_sleep$p.value)
-
-res_ilr1 <- wilcox.test(ilr1 ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
-z_ilr1 <- qnorm(res_ilr1$p.value/2)
-paste0("ilr1: Zscore =" , z_ilr1, ", p-value = ", res_ilr1$p.value)
-
-res_ilr2 <- wilcox.test(ilr2 ~ weekenddag, data = valid_data_16h7d, paired = FALSE)
-z_ilr2 <- qnorm(res_ilr2$p.value/2)
-paste0("ilr2: Zscore =" , z_ilr2, ", p-value = ", res_ilr2$p.value)
-
-rm(res_PA, z_PA, res_SB, z_SB, res_sleep, z_sleep, res_ilr1, z_ilr1, res_ilr2, z_ilr2)
-```
 
 ## Step 4: Examine day-to-day variability
 
@@ -806,62 +841,6 @@ paste0("wrist MAD 50 dur: Chi-square =" , day_day_MAD_50_dur.wrist$statistic, ",
 day_day_MAD_75_dur.wrist <- friedman.test(y = axivity.estimates.wrist$MAD_75_duration, groups = axivity.estimates.wrist$days, blocks = axivity.estimates.wrist$id)
 paste0("wrist MAD 75 dur: Chi-square =" , day_day_MAD_75_dur.wrist$statistic, ", p-value = ", day_day_MAD_75_dur.wrist$p.value)
 
-```
-
-```{r Step 4 Axivity per milestone, echo=FALSE}
-## Step 4: Day-to-day variability
-# Hip
-day_day_ENMO.hip_notwalk <- friedman.test(y = estimates.notwalk.hip$ENMO, groups = estimates.notwalk.hip$days, blocks = estimates.notwalk.hip$id)
-paste0("Hip not walking ENMO: Chi-square =" , day_day_ENMO.hip_notwalk$statistic, ", p-value = ", day_day_ENMO.hip_notwalk$p.value)
-day_day_MAD.hip_notwalk <- friedman.test(y = estimates.notwalk.hip$MAD, groups = estimates.notwalk.hip$days, blocks = estimates.notwalk.hip$id)
-paste0("Hip not walking MAD: Chi-square =" , day_day_MAD.hip_notwalk$statistic, ", p-value = ", day_day_MAD.hip_notwalk$p.value)
-
-day_day_ENMO.hip_walk <- friedman.test(y = estimates.walk.hip$ENMO, groups = estimates.walk.hip$days, blocks = estimates.walk.hip$id)
-paste0("Hip walking ENMO: Chi-square =" , day_day_ENMO.hip_walk$statistic, ", p-value = ", day_day_ENMO.hip_walk$p.value)
-day_day_MAD.hip_walk <- friedman.test(y = estimates.walk.hip$MAD, groups = estimates.walk.hip$days, blocks = estimates.walk.hip$id)
-paste0("Hip walking MAD: Chi-square =" , day_day_MAD.hip_walk$statistic, ", p-value = ", day_day_MAD.hip_walk$p.value)
-
-# Wrist
-day_day_ENMO.wrist_notwalk <- friedman.test(y = estimates.notwalk.wrist$ENMO, groups = estimates.notwalk.wrist$days, blocks = estimates.notwalk.wrist$id)
-paste0("Wrist not walking ENMO: Chi-square =" , day_day_ENMO.wrist_notwalk$statistic, ", p-value = ", day_day_ENMO.wrist_notwalk$p.value)
-day_day_MAD.wrist_notwalk <- friedman.test(y = estimates.notwalk.wrist$MAD, groups = estimates.notwalk.wrist$days, blocks = estimates.notwalk.wrist$id)
-paste0("Wrist not walking MAD: Chi-square =" , day_day_MAD.wrist_notwalk$statistic, ", p-value = ", day_day_MAD.wrist_notwalk$p.value)
-
-day_day_ENMO.wrist_walk <- friedman.test(y = estimates.walk.wrist$ENMO, groups = estimates.walk.wrist$days, blocks = estimates.walk.wrist$id)
-paste0("Wrist walking ENMO: Chi-square =" , day_day_ENMO.wrist_walk$statistic, ", p-value = ", day_day_ENMO.wrist_walk$p.value)
-day_day_MAD.wrist_walk <- friedman.test(y = estimates.walk.wrist$MAD, groups = estimates.walk.wrist$days, blocks = estimates.walk.wrist$id)
-paste0("Wrist walking MAD: Chi-square =" , day_day_MAD.wrist_walk$statistic, ", p-value = ", day_day_MAD.wrist_walk$p.value)
-
-# Both
-day_day_ENMO.both_notwalk <- friedman.test(y = estimates.notwalk.both$ENMO.both, groups = estimates.notwalk.both$days, blocks = estimates.notwalk.both$id)
-paste0("Hip * Wrist not walking ENMO: Chi-square =" , day_day_ENMO.both_notwalk$statistic, ", p-value = ", day_day_ENMO.both_notwalk$p.value)
-day_day_MAD.both_notwalk <- friedman.test(y = estimates.notwalk.both$MAD.both, groups = estimates.notwalk.both$days, blocks = estimates.notwalk.both$id)
-paste0("Hip * Wrist not walking MAD: Chi-square =" , day_day_MAD.both_notwalk$statistic, ", p-value = ", day_day_MAD.both_notwalk$p.value)
-
-day_day_ENMO.both_walk <- friedman.test(y = estimates.walk.both$ENMO.both, groups = estimates.walk.both$days, blocks = estimates.walk.both$id)
-paste0("Hip * Wrist walking ENMO: Chi-square =" , day_day_ENMO.both_walk$statistic, ", p-value = ", day_day_ENMO.both_walk$p.value)
-day_day_MAD.both_walk <- friedman.test(y = estimates.walk.both$MAD.both, groups = estimates.walk.both$days, blocks = estimates.walk.both$id)
-paste0("Hip * Wrist walking MAD: Chi-square =" , day_day_MAD.both_walk$statistic, ", p-value = ", day_day_MAD.both_walk$p.value)
-```
-
-
-# My Little Moves app
-
-```{r Step 4 MLM app, echo=FALSE}
-## Step 4: Day-to-day variability
-day_day_PA <- friedman.test(y = valid_data_16h7d$PA, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
-paste0("PA: Chi-square =" , day_day_PA$statistic, ", p-value = ", day_day_PA$p.value)
-day_day_SB <- friedman.test(y = valid_data_16h7d$SB, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
-paste0("SB: Chi-square =" , day_day_SB$statistic, ", p-value = ", day_day_SB$p.value)
-day_day_sleep <- friedman.test(y = valid_data_16h7d$sleep, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
-paste0("Sleep: Chi-square =" , day_day_sleep$statistic, ", p-value = ", day_day_sleep$p.value)
-
-day_day_ilr1 <- friedman.test(y = valid_data_16h7d$ilr1, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
-paste0("ilr1: Chi-square =" , day_day_ilr1$statistic, ", p-value = ", day_day_ilr1$p.value)
-day_day_ilr2 <- friedman.test(y = valid_data_16h7d$ilr2, groups = valid_data_16h7d$dag, blocks = valid_data_16h7d$castorID)
-paste0("ilr1: Chi-square =" , day_day_ilr2$statistic, ", p-value = ", day_day_ilr2$p.value)
-
-rm(day_day_PA, day_day_SB, day_day_sleep, day_day_ilr1, day_day_ilr2)
 ```
 
 ## Step 5: Calculate single day intraclass correlation (ICC) (2,1)
@@ -1033,161 +1012,9 @@ paste0("Wrist MAD 75 dur: ICC =" , ICC.MAD_75_dur.wrist$value, "[", ICC.MAD_75_d
 
 ```
 
-```{r Step 5 Axivity hip milestones groups, echo=FALSE}
-# Hip
-# Not walking
-ratings.hip.notwalk  <- reshape(estimates.notwalk.hip, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.hip.notwalk_long <- as.data.frame(cbind(estimates.notwalk.hip$id, estimates.notwalk.hip$days, estimates.notwalk.hip$ENMO))
-names(ratings_ENMO.hip.notwalk_long) <- c("id", "days", "ENMO")
-ratings_ENMO.hip.notwalk_long$ENMO <- as.numeric(ratings_ENMO.hip.notwalk_long$ENMO)
-ratings_ENMO.hip.notwalk  <- reshape(ratings_ENMO.hip.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.hip.notwalk <- irr::icc(ratings_ENMO.hip.notwalk[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO not walking: ICC =" , ICC.ENMO.hip.notwalk$value, "[", ICC.ENMO.hip.notwalk$lbound, ";", ICC.ENMO.hip.notwalk$ubound, "]")
-
-ratings_MAD.hip.notwalk_long <- as.data.frame(cbind(estimates.notwalk.hip$id, estimates.notwalk.hip$days, estimates.notwalk.hip$MAD))
-names(ratings_MAD.hip.notwalk_long) <- c("id", "days", "MAD")
-ratings_MAD.hip.notwalk_long$MAD <- as.numeric(ratings_MAD.hip.notwalk_long$MAD)
-ratings_MAD.hip.notwalk  <- reshape(ratings_MAD.hip.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.hip.notwalk <- irr::icc(ratings_MAD.hip.notwalk[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD not walking: ICC =" , ICC.MAD.hip.notwalk$value, "[", ICC.MAD.hip.notwalk$lbound, ";", ICC.MAD.hip.notwalk$ubound, "]")
-
-# Walking
-ratings.hip.walk  <- reshape(estimates.walk.hip, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.hip.walk_long <- as.data.frame(cbind(estimates.walk.hip$id, estimates.walk.hip$days, estimates.walk.hip$ENMO))
-names(ratings_ENMO.hip.walk_long) <- c("id", "days", "ENMO")
-ratings_ENMO.hip.walk_long$ENMO <- as.numeric(ratings_ENMO.hip.walk_long$ENMO)
-ratings_ENMO.hip.walk  <- reshape(ratings_ENMO.hip.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.hip.walk <- irr::icc(ratings_ENMO.hip.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip ENMO walking: ICC =" , ICC.ENMO.hip.walk$value, "[", ICC.ENMO.hip.walk$lbound, ";", ICC.ENMO.hip.walk$ubound, "]")
-
-ratings_MAD.hip.walk_long <- as.data.frame(cbind(estimates.walk.hip$id, estimates.walk.hip$days, estimates.walk.hip$MAD))
-names(ratings_MAD.hip.walk_long) <- c("id", "days", "MAD")
-ratings_MAD.hip.walk_long$MAD <- as.numeric(ratings_MAD.hip.walk_long$MAD)
-ratings_MAD.hip.walk  <- reshape(ratings_MAD.hip.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.hip.walk <- irr::icc(ratings_MAD.hip.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip MAD walking: ICC =" , ICC.MAD.hip.walk$value, "[", ICC.MAD.hip.walk$lbound, ";", ICC.MAD.hip.walk$ubound, "]")
-
-# Wrist
-# Not walking
-ratings.wrist.notwalk  <- reshape(estimates.notwalk.wrist, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.wrist.notwalk_long <- as.data.frame(cbind(estimates.notwalk.wrist$id, estimates.notwalk.wrist$days, estimates.notwalk.wrist$ENMO))
-names(ratings_ENMO.wrist.notwalk_long) <- c("id", "days", "ENMO")
-ratings_ENMO.wrist.notwalk_long$ENMO <- as.numeric(ratings_ENMO.wrist.notwalk_long$ENMO)
-ratings_ENMO.wrist.notwalk  <- reshape(ratings_ENMO.wrist.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.wrist.notwalk <- irr::icc(ratings_ENMO.wrist.notwalk[,-1], model = "twoway", type = "consistency")
-paste0("Wrist ENMO not walking: ICC =" , ICC.ENMO.wrist.notwalk$value, "[", ICC.ENMO.wrist.notwalk$lbound, ";", ICC.ENMO.wrist.notwalk$ubound, "]")
-
-ratings_MAD.wrist.notwalk_long <- as.data.frame(cbind(estimates.notwalk.wrist$id, estimates.notwalk.wrist$days, estimates.notwalk.wrist$MAD))
-names(ratings_MAD.wrist.notwalk_long) <- c("id", "days", "MAD")
-ratings_MAD.wrist.notwalk_long$MAD <- as.numeric(ratings_MAD.wrist.notwalk_long$MAD)
-ratings_MAD.wrist.notwalk  <- reshape(ratings_MAD.wrist.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.wrist.notwalk <- irr::icc(ratings_MAD.wrist.notwalk[,-1], model = "twoway", type = "consistency")
-paste0("Wrist MAD not walking: ICC =" , ICC.MAD.wrist.notwalk$value, "[", ICC.MAD.wrist.notwalk$lbound, ";", ICC.MAD.wrist.notwalk$ubound, "]")
-
-# Walking
-ratings.wrist.walk  <- reshape(estimates.walk.wrist, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.wrist.walk_long <- as.data.frame(cbind(estimates.walk.wrist$id, estimates.walk.wrist$days, estimates.walk.wrist$ENMO))
-names(ratings_ENMO.wrist.walk_long) <- c("id", "days", "ENMO")
-ratings_ENMO.wrist.walk_long$ENMO <- as.numeric(ratings_ENMO.wrist.walk_long$ENMO)
-ratings_ENMO.wrist.walk  <- reshape(ratings_ENMO.wrist.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.wrist.walk <- irr::icc(ratings_ENMO.wrist.walk[,-1], model = "twoway", type = "consistency")
-paste0("Wrist ENMO walking: ICC =" , ICC.ENMO.wrist.walk$value, "[", ICC.ENMO.wrist.walk$lbound, ";", ICC.ENMO.wrist.walk$ubound, "]")
-
-ratings_MAD.wrist.walk_long <- as.data.frame(cbind(estimates.walk.wrist$id, estimates.walk.wrist$days, estimates.walk.wrist$MAD))
-names(ratings_MAD.wrist.walk_long) <- c("id", "days", "MAD")
-ratings_MAD.wrist.walk_long$MAD <- as.numeric(ratings_MAD.wrist.walk_long$MAD)
-ratings_MAD.wrist.walk  <- reshape(ratings_MAD.wrist.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.wrist.walk <- irr::icc(ratings_MAD.wrist.walk[,-1], model = "twoway", type = "consistency")
-paste0("Wrist MAD walking: ICC =" , ICC.MAD.wrist.walk$value, "[", ICC.MAD.wrist.walk$lbound, ";", ICC.MAD.wrist.walk$ubound, "]")
-
-# Both
-# Not walking
-ratings.both.notwalk  <- reshape(estimates.notwalk.both, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.both.notwalk_long <- as.data.frame(cbind(estimates.notwalk.both$id, estimates.notwalk.both$days, estimates.notwalk.both$ENMO.both))
-names(ratings_ENMO.both.notwalk_long) <- c("id", "days", "ENMO")
-ratings_ENMO.both.notwalk_long$ENMO <- as.numeric(ratings_ENMO.both.notwalk_long$ENMO)
-ratings_ENMO.both.notwalk  <- reshape(ratings_ENMO.both.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.both.notwalk <- irr::icc(ratings_ENMO.both.notwalk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * Wrist ENMO not walking: ICC =" , ICC.ENMO.both.notwalk$value, "[", ICC.ENMO.both.notwalk$lbound, ";", ICC.ENMO.both.notwalk$ubound, "]")
-
-ratings_MAD.both.notwalk_long <- as.data.frame(cbind(estimates.notwalk.both$id, estimates.notwalk.both$days, estimates.notwalk.both$MAD.both))
-names(ratings_MAD.both.notwalk_long) <- c("id", "days", "MAD")
-ratings_MAD.both.notwalk_long$MAD <- as.numeric(ratings_MAD.both.notwalk_long$MAD)
-ratings_MAD.both.notwalk  <- reshape(ratings_MAD.both.notwalk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.both.notwalk <- irr::icc(ratings_MAD.both.notwalk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * Wrist MAD not walking: ICC =" , ICC.MAD.both.notwalk$value, "[", ICC.MAD.both.notwalk$lbound, ";", ICC.MAD.both.notwalk$ubound, "]")
-
-# Walking
-ratings.both.walk  <- reshape(estimates.walk.both, idvar = "days", timevar = "id", direction = "wide")
-ratings_ENMO.both.walk_long <- as.data.frame(cbind(estimates.walk.both$id, estimates.walk.both$days, estimates.walk.both$ENMO.both))
-names(ratings_ENMO.both.walk_long) <- c("id", "days", "ENMO")
-ratings_ENMO.both.walk_long$ENMO <- as.numeric(ratings_ENMO.both.walk_long$ENMO)
-ratings_ENMO.both.walk  <- reshape(ratings_ENMO.both.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.ENMO.both.walk <- irr::icc(ratings_ENMO.both.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * Wrist ENMO walking: ICC =" , ICC.ENMO.both.walk$value, "[", ICC.ENMO.both.walk$lbound, ";", ICC.ENMO.both.walk$ubound, "]")
-
-ratings_MAD.both.walk_long <- as.data.frame(cbind(estimates.walk.both$id, estimates.walk.both$days, estimates.walk.both$MAD.both))
-names(ratings_MAD.both.walk_long) <- c("id", "days", "MAD")
-ratings_MAD.both.walk_long$MAD <- as.numeric(ratings_MAD.both.walk_long$MAD)
-ratings_MAD.both.walk  <- reshape(ratings_MAD.both.walk_long, idvar = "days", timevar = "id", direction = "wide")
-ICC.MAD.both.walk <- irr::icc(ratings_MAD.both.walk[,-1], model = "twoway", type = "consistency")
-paste0("Hip * Wrist MAD walking: ICC =" , ICC.MAD.both.walk$value, "[", ICC.MAD.both.walk$lbound, ";", ICC.MAD.both.walk$ubound, "]")
-```
 
 # My Little Moves app
 
-```{r Step 5 MLM pp, echo=FALSE}
-# Run intra-class correlations (ICC). Random consistency models, using single measure, ICC(2,1). Single measure is ICC for single day.
-ratings_PA_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$PA))
-names(ratings_PA_long) <- c("id", "days", "PA")
-ratings_PA_long$PA <- as.numeric(ratings_PA_long$PA)
-ratings_PA_long$days <- as.factor(ratings_PA_long$days)
-ratings_PA_long$id <- as.factor(ratings_PA_long$id)
-ratings_PA  <- reshape(ratings_PA_long, idvar = "id", timevar = "days", direction = "wide")
-
-ratings_SB_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$SB))
-names(ratings_SB_long) <- c("id", "days", "SB")
-ratings_SB_long$SB <- as.numeric(ratings_SB_long$SB)
-ratings_SB_long$days <- as.factor(ratings_SB_long$days)
-ratings_SB_long$id <- as.factor(ratings_SB_long$id)
-ratings_SB  <- reshape(ratings_SB_long, idvar = "id", timevar = "days", direction = "wide")
-
-ratings_sleep_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$sleep))
-names(ratings_sleep_long) <- c("id", "days", "sleep")
-ratings_sleep_long$sleep <- as.numeric(ratings_sleep_long$sleep)
-ratings_sleep_long$days <- as.factor(ratings_sleep_long$days)
-ratings_sleep_long$id <- as.factor(ratings_sleep_long$id)
-ratings_sleep  <- reshape(ratings_sleep_long, idvar = "id", timevar = "days", direction = "wide")
-
-ratings_ilr1_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$ilr1))
-names(ratings_ilr1_long) <- c("id", "days", "ilr1")
-ratings_ilr1_long$ilr1 <- as.numeric(ratings_ilr1_long$ilr1)
-ratings_ilr1_long$days <- as.factor(ratings_ilr1_long$days)
-ratings_ilr1_long$id <- as.factor(ratings_ilr1_long$id)
-ratings_ilr1  <- reshape(ratings_ilr1_long, idvar = "id", timevar = "days", direction = "wide")
-
-ratings_ilr2_long <- as.data.frame(cbind(valid_data_16h7d$castorID, valid_data_16h7d$dag, valid_data_16h7d$ilr2))
-names(ratings_ilr2_long) <- c("id", "days", "ilr2")
-ratings_ilr2_long$ilr2 <- as.numeric(ratings_ilr2_long$ilr2)
-ratings_ilr2_long$days <- as.factor(ratings_ilr2_long$days)
-ratings_ilr2_long$id <- as.factor(ratings_ilr2_long$id)
-ratings_ilr2  <- reshape(ratings_ilr1_long, idvar = "id", timevar = "days", direction = "wide")
-
-
-ICC.PA <- irr::icc(ratings_PA[,-1], model = "twoway", type = "consistency")
-paste0("PA: ICC =" , ICC.PA$value, "[", ICC.PA$lbound, ";", ICC.PA$ubound, "]")
-ICC.SB <- irr::icc(ratings_SB[,-1], model = "twoway", type = "consistency")
-paste0("SB: ICC =" , ICC.SB$value, "[", ICC.SB$lbound, ";", ICC.SB$ubound, "]")
-ICC.sleep <- irr::icc(ratings_sleep[,-1], model = "twoway", type = "consistency")
-paste0("Sleep: ICC =" , ICC.sleep$value, "[", ICC.sleep$lbound, ";", ICC.sleep$ubound, "]")
-ICC.ilr1 <- irr::icc(ratings_ilr1[,-1], model = "twoway", type = "consistency")
-paste0("ilr1: ICC =" , ICC.ilr1$value, "[", ICC.ilr1$lbound, ";", ICC.ilr1$ubound, "]")
-ICC.ilr2 <- irr::icc(ratings_ilr2[,-1], model = "twoway", type = "consistency")
-paste0("ilr2: ICC =" , ICC.ilr2$value, "[", ICC.ilr2$lbound, ";", ICC.ilr2$ubound, "]")
-
-
-rm(valid_data_16h7d, ratings_PA_long, ratings_PA, ratings_SB_long, ratings_SB, ratings_sleep_long, ratings_sleep, ratings_ilr1_long, ratings_ilr1, ratings_ilr2_long, ratings_ilr2)
-```
 
 ## Step 6: Calculate number of days required to reach reliability
 
@@ -1255,62 +1082,6 @@ print("MAD_75_dur: ")
 spearman.brown(singleICC = ICC.MAD_75_dur.wrist$value, desiredR = 0.7)
 ```
 
-```{r Step 6 Axivity milestones groups, echo=FALSE}
-#Hip
-print("Hip Results not walking: To reach 0.7")
-print("ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.hip.notwalk$value, desiredR = 0.7)
-print("MAD: ")
-spearman.brown(singleICC = ICC.MAD.hip.notwalk$value, desiredR = 0.7)
-
-print("Hip Results walking: To reach 0.7")
-print("ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.hip.walk$value, desiredR = 0.7)
-print("MAD: ")
-spearman.brown(singleICC = ICC.MAD.hip.walk$value, desiredR = 0.7)
-
-#Wrist
-print("Wrist Results not walking: To reach 0.7")
-print("ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.wrist.notwalk$value, desiredR = 0.7)
-print("MAD: ")
-spearman.brown(singleICC = ICC.MAD.wrist.notwalk$value, desiredR = 0.7)
-
-print("Wrist Results walking: To reach 0.7")
-print("ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.wrist.walk$value, desiredR = 0.7)
-print("MAD: ")
-spearman.brown(singleICC = ICC.MAD.wrist.walk$value, desiredR = 0.7)
-
-#Both
-print("Hip * Wrist Results not walking: To reach 0.7")
-print("ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.both.notwalk$value, desiredR = 0.7)
-print("MAD: ")
-spearman.brown(singleICC = ICC.MAD.both.notwalk$value, desiredR = 0.7)
-
-print("Hip * Wrist Results walking: To reach 0.7")
-print("ENMO: ")
-spearman.brown(singleICC = ICC.ENMO.both.walk$value, desiredR = 0.7)
-print("MAD: ")
-spearman.brown(singleICC = ICC.MAD.both.walk$value, desiredR = 0.7)
-```
-
-# My Little Moves app
-
-```{r Step 6 MLM pp, echo=FALSE}
-# Run the Spearman-Brown prophecy formula inputting single day ICC’s for each outcome and defining
-print("To reach 0.7 PA: ")
-spearman.brown(singleICC = ICC.PA$value, desiredR = 0.7)
-print("To reach 0.7: SB")
-spearman.brown(singleICC = ICC.SB$value, desiredR = 0.7)
-print("To reach 0.7 sleep: ")
-spearman.brown(singleICC = ICC.sleep$value, desiredR = 0.7)
-print("To reach 0.7 ILR1: ")
-spearman.brown(singleICC = ICC.ilr1$value, desiredR = 0.7)
-print("To reach 0.7 ILR2: ")
-spearman.brown(singleICC = ICC.ilr2$value, desiredR = 0.7)
-```
 
 ```{r App feasibility}
 valid_data_16h3d <- validday.app(data.app, minhours = 16, mindays = 3, savedir = filepath.app) 
@@ -1323,3 +1094,27 @@ length(unique(valid_data_16h4d$castorID)) / length(unique(data.app$castorID))
 
 ```
 
+
+
+# ```{r Heatmaps for required number of days MLM app}
+# outcomes <- c("PA", "SB", "sleep", "ilr1", "ilr2")
+# for(outcome in 1:outcomes){
+#   if(outcomes[outcome] == "PA"){ temp <- ICC.PA
+#   } else if(outcomes[outcome] == "SB"){ temp <- ICC.SB
+#   } else if(outcomes[outcome] == "sleep"){ temp <- ICC.sleep
+#   } else if(outcomes[outcome] == "ilr1"){ temp <- ICC.ilr1
+#   } else { temp <- ICC.ilr2
+#   }
+#   heatmap_colors <- cut(temp$ICC, breaks = c(0, 0.70, 1), labels = c("red", "green"))
+#   heatmap <- ggplot2::ggplot(temp, ggplot2::aes(x = hour, y = day, fill = ICC)) +
+#   ggplot2::geom_tile(color = "white") +
+#   #ggplot2::scale_fill_manual(values = c(red = "red", green = "green")) +
+#   ggplot2::geom_text(ggplot2::aes(label = round(rel*100, 1)), color = "black", size = 2) +
+#   ggplot2::labs(x = "Number of hours", y = "Number of days") +
+#   ggplot2::theme_minimal() +
+#   ggplot2::scale_x_continuous(breaks = round(unique(temp$hour))) +  
+#   ggplot2::scale_y_continuous(breaks = round(unique(temp$day))) 
+# print(heatmap)
+# ggplot2::ggsave(filename = paste0(savedir, "MLMapp/reliability_", unique(temp.icc$outcome)[outcomes], ".jpeg"), plot = heatmap, width = 10, height = 8, units = "in", dpi = 300)
+# }
+# ```
