@@ -22,7 +22,7 @@ load.castor <- function(filepath, filename, cohort) {
     tmp.data <- rbind(tmp.data, tmp)
   }
   index <- which(is.na(tmp.data$castorID))
-  index <- c(index, which(tmp.data$castorID) == "04MLM004") # This participant needs to be excluded (premature <32 weeks)
+  index <- c(index, which(tmp.data$Participant.Id == "04MLM004")) # This participant needs to be excluded (premature <32 weeks)
   
   if(length(index) > 0){
     tmp.data <- tmp.data[-index,] # Remove empty rows
