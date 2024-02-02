@@ -5,14 +5,14 @@
 #' @param tz Time zone specification to be used, default "Europe/Amsterdam".
 #' @param filepath Path to the root of the accelerometer data.
 #' @param outputdir Path to the root directory in which all milestone data will be saved.
-#' @param validhours Integer that indicates the number of hours for a day to be valid (midnight-midnight), default = 16.
+#' @param validhours Integer that indicates the number of hours for a day to be valid (midnight-midnight), default = 8.
 #' @param epochlength Integer that indicates epoch length in seconds, default = 5.
 #' @param processeddir Path to the directory in which the generated milestone was saved.
 #' @param overwrit Boolean to indicate if existing data needs to be overwritten, default = FALSE
 #' @import GGIR
 #' @export
 
-load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir, validhours = 16, epochlength = 5, processeddir, overwrit = FALSE){
+load.structure.axivity <- function(tz = "Europe/Amsterdam", filepath, outputdir, validhours = 8, epochlength = 5, processeddir, overwrit = FALSE){
 
   # Load accelerometer files and calculate metrics
   GGIR::GGIR(
