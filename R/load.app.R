@@ -26,6 +26,7 @@ load.app <- function(filepath, filename, cohort, measurementperiod, sep) {
     }
   }
   index <- which(is.na(tmp.data$castorID))
+  index <- c(index, which(tmp.data$castorID == "04MLM004"))
   tmp.data <- tmp.data[-index,] # Remove empty rows
   return(tmp.data)
 }
