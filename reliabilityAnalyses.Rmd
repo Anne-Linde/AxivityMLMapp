@@ -73,7 +73,14 @@ counter = 1
 
 for(h in 1: length(hours)){
   # Load in data
-  data <- validday.app(data.app, minhours = hours[h], mindays = 2, savedir = filepath.app, CoDa = TRUE) 
+  filename = paste0(filepath.app, "/valid_data_", hours[h], "h2d.RData")
+  if(!file.exists(filename)){
+      data <- validday.app(data.app, minhours = hours[h], mindays = 2, savedir = filepath.app, CoDa = TRUE) 
+  } else{
+    load(filename)
+    data <- valid_data
+    rm(valid_data)
+  }
   # Include data of participants with at least one weekend and one week day
   WKWKND <- data.frame()
   for(pp in 1:length(unique(data$castorID))){
@@ -82,6 +89,7 @@ for(h in 1: length(hours)){
       WKWKND <- rbind(WKWKND, tmp)
     }
   }
+  
   for(out in 1:length(outcomes)){
     week_weekend_differences[counter, 1] <- hours[h]
     week_weekend_differences[counter, 2] <- outcomes[out]
@@ -90,6 +98,7 @@ for(h in 1: length(hours)){
     col <- which(colnames(WKWKND) == outcomes[out])
 
     if(outcomes[out] %in% c("PA", "SB", "sleep")){
+      result_aggregate <- aggregate(cbind(PA, SB, sleep) ~ castorID + weekenddag, data = WKWKND, FUN = median)
       week_weekend_differences[counter, 4] <- median(unlist(subset(WKWKND, weekenddag == 0)[col]), na.rm = T)
       week_weekend_differences[counter, 5] <- quantile(unlist(subset(WKWKND, weekenddag == 0)[col]), probs = 0.25, na.rm = T)
       week_weekend_differences[counter, 6] <- quantile(unlist(subset(WKWKND, weekenddag == 0)[col]), probs = 0.75, na.rm = T)
@@ -146,8 +155,9 @@ load(paste0(savedir, "MLMapp/week_weekend.RData")) # Save week weekend differenc
 # For all valid wear criteria
 for(d in 1:length(days)){
   for(h in 1: length(hours)){
-    if(file.exists(paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d.RData"))){
-       load(paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d.RData"))
+    filename = paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d.RData")
+    if(file.exists(filename)){
+       load(filename)
        data <- valid_data
        rm(valid_data)
      } else {
@@ -172,11 +182,8 @@ for(d in 1:length(days)){
       for(rep in 1:ntimes){
         repetition <- c(repetition, rep)
         
-        if(week_weekend_differences$p_value[which(week_weekend_differences$hours == hours[h] & week_weekend_differences$outcome == colnames(temp)[variable])] < .05){ # If there are differences between week and weekend days
-            sample <- temp %>% group_by(id, weekendday) %>% slice_sample(n = days[d]-1) # Include at least one weekend day
-        } else{
-            sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
-        }
+        sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
+        save(sample, file= paste0(savedir, "/sampling/app/sample_", rep, "_", days[d], "d", hours[h], "h.RData"))
 
         var.icc <- data.frame()
         #sample[which(is.na(sample[,variable])), variable] <- 0
@@ -422,14 +429,9 @@ for(placement in 1:length(attachment)){
       temp.icc_temp <- data.frame()
       for(rep in 1:ntimes){
         repetition <- c(repetition, rep)
-        
-        # If there are differences between week and weekend days
-        if(wkwkd_differences$p_value[which(wkwkd_differences$hours == hours[h] & wkwkd_differences$outcome ==
-                                           colnames(temp)[variable])] < .05){ 
-            sample <- temp %>% group_by(id, weekday) %>% slice_sample(n = days[d]-1) # Include at least one weekend day
-        } else{
-            sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
-        }
+        sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
+
+        save(sample, file= paste0(savedir, "/sampling/axivity/sample_", rep, "_", days[d], "d", hours[h], "h.RData"))
 
         var.icc <- data.frame()
         temp.var <- cbind(sample$id,  rep(1:days[d], nrow(sample)), sample[,variable])
