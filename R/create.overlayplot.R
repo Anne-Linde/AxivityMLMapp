@@ -48,7 +48,9 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
         
       }
       categories <- unique(app_day$activity)
-      palette <- viridis::viridis(length(categories))
+      #palette <- viridis::viridis(length(categories), option = "D")
+      palette <- RColorBrewer::brewer.pal(n = length(categories), name = "Dark2")
+      
       
       for(entry in 1:nrow(app_day)){ # Select axivity data for the timeslots an activity is filled in
         
@@ -66,15 +68,12 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
               ggplot2::geom_rect(data = df_hip, mapping= ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 
               
               ggplot2::geom_line(data = data.hip_day, ggplot2::aes(data.hip_day$timestamp, data.hip_day$ENMO, group = data.hip_day$activity)) + 
-              #ggplot2::geom_rect(data = df_hip, mapping= ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 
               ggplot2::theme_classic() + 
-              ggplot2::scale_fill_discrete(name = "App categories", labels = categories[sort(palette, index.return = TRUE)$ix]) +
-              ggplot2::scale_y_continuous(name="ENMO (g)") +
+              ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
+              ggplot2::scale_y_continuous(name="Hip") +
               ggplot2::xlab("Time (hh:mm:ss)") #, date_labels = function(x) strftime(as.POSIXct(x, origin = "1970-01-01"), format = "%H:%M:%S")) +
               #ggplot2::ggtitle(paste0("Participant: ", pp, ", Date: ", unique(as.Date(as.POSIXct(df_wrist$xmax, origin = "1970-01-01"))))) +
               #ggplot2::scale_x_datetime(name="Time (hh:mm)", date_labels = "%H:%M", date_breaks = "1 hour")
-            
-            
             ggplot2::ggsave(file = paste0(savedir, "/plots/overlay/", pp, "_hip_", "day_", days[day], ".jpeg"), g_hip, device = "jpeg", width = 15, height = 10, dpi = 600)
             
           }
@@ -83,14 +82,17 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
             df_wrist$xmax <- as.POSIXct(xmax, origin = "1970-01-01")
             df_wrist$col <- col
             
+            figure_labels = c("personal care", "active play", "sitting/lying", "sleeping", "eating/drinking", "quiet play", "passive transport")
             g_wrist <- ggplot2::ggplot() + 
               ggplot2::geom_line(data = data.wrist_day, ggplot2::aes(data.wrist_day$timestamp, data.wrist_day$ENMO, group = data.wrist_day$activity)) + 
               ggplot2::geom_rect(data = df_wrist, mapping=ggplot2::aes(xmin = anytime::anytime(xmin), xmax = anytime::anytime(xmax), ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 
               ggplot2::theme_classic() + 
-              ggplot2::scale_fill_discrete(name = "App categories", labels = categories[sort(palette, index.return = TRUE)$ix]) +
-              ggplot2::scale_y_continuous(name="ENMO (g)") +
+              #ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = figure_labels) +
+              ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
+              ggplot2::scale_y_continuous(name="Wrist") +
               ggplot2::xlab("Time (hh:mm:ss)") #, labels = function(x) strftime(as.POSIXct(x, origin = "1970-01-01"), format = "%H:%M:%S")) +
-              #ggplot2::ggtitle(paste0("Participant: ", pp, ", Date: ", unique(as.Date(as.POSIXct(df_wrist$xmax, origin = "1970-01-01"))))) +
+      
+            #ggplot2::ggtitle(paste0("Participant: ", pp, ", Date: ", unique(as.Date(as.POSIXct(df_wrist$xmax, origin = "1970-01-01"))))) +
               #ggplot2::scale_x_datetime(name="Time (hh:mm)", date_labels = "%H:%M", date_breaks = "1 hour")
             
             ggplot2::ggsave(file = paste0(savedir, "/plots/overlay/", pp, "_wrist_", "day_", days[day], ".jpeg"), g_wrist, device = "jpeg", width = 15, height = 10, dpi = 600)
@@ -98,7 +100,7 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
         }
       }
       if(exists("g_hip") & exists("g_wrist")){
-        combine.save.plots(g_wrist, g_hip, "boxplots", savedir, filename = paste0("/plots/overlay/hipwrist_combined/", pp, "_combined", "day_", days[day], ".jpeg"))
+        combine.save.plots(g_wrist, g_hip, "overlay", savedir, filename = paste0("/plots/overlay/hipwrist_combined/", pp, "_combined", "day_", days[day], ".jpeg"))
       }
     }
   }
