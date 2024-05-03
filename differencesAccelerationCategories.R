@@ -44,7 +44,7 @@ level_order <- c("sleeping", "sittinglying", "personalcare", "eatingdrinking", "
 #                  "activeplay", "dontknowplay", "someoneelse", "otheractivity", "dontknow")
 level_labels <- c("Sleeping", "Sitting/lying", "Personal care", "Eating/drinking", "Passive screen use", 
                  "Active screen use", "Passive transport", "Active transport", "Calm play", 
-                 "Active Play", "Don't know play")
+                 "Active play", "Play of unknown intensity")
 
 # Nice to have: number of entries per category
 # n_fun <- function(x){
@@ -52,36 +52,76 @@ level_labels <- c("Sleeping", "Sitting/lying", "Personal care", "Eating/drinking
 #                     label = length(x)))
 # }
 
-bxp_ENMO <- ggplot2::ggplot(df_long.ENMO, ggplot2::aes(y = value, x = as.factor(activity), fill =metric)) + 
-  ggplot2::geom_boxplot(outlier.shape = 19, outlier.alpha = 0.1) + ggplot2::theme_classic() +
+bxp_ENMO_activities <- ggplot2::ggplot(df_long.ENMO, ggplot2::aes(y = value, x = as.factor(activity), fill =metric), alpha = 0.35) + 
+  ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.55) + ggplot2::theme_classic() +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
   ggplot2::scale_x_discrete(limits = level_order, labels = level_labels) + ggplot2::xlab("") + 
   ggplot2::ylab(expression(paste("ENMO (m", italic("g"), ")"))) +
-  ggplot2::scale_fill_discrete(name = "Accelerometer placement", labels = c("Hip", "Wrist")) #+
- # ggplot2::stat_summary(fun.data = n_fun, geom = "text", vjust = -20) 
+  ggplot2::scale_fill_manual(values = c("#440154FF", "#FDE725FF"), name = "Accelerometer placement", labels = c("Hip", "Wrist"))+
+  ggplot2::ylim(0,150) 
 
-bxp_MAD <- ggplot2::ggplot(df_long.MAD, ggplot2::aes(y = value, x = as.factor(activity), fill =metric)) + 
-  ggplot2::geom_boxplot(outlier.shape = 19, outlier.alpha = 0.1) + ggplot2::theme_classic() +
+bxp_MAD_activities <- ggplot2::ggplot(df_long.MAD, ggplot2::aes(y = value, x = as.factor(activity), fill =metric)) + 
+  ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.55) + ggplot2::theme_classic() +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
   ggplot2::scale_x_discrete(limits = level_order, labels = level_labels) + ggplot2::xlab("App categories") + 
   ggplot2::ylab(expression(paste("MAD (m", italic("g"), ")"))) +
-  ggplot2::scale_fill_discrete(name = "Accelerometer placement", labels = c("Hip", "Wrist"))
+  ggplot2::scale_fill_manual(values = c("#440154FF", "#FDE725FF"), name = "Accelerometer placement", labels = c("Hip", "Wrist"))+
+  ggplot2::ylim(0,150) 
 
-gridExtra::grid.arrange(bxp_ENMO, bxp_MAD, nrow=2) #arranges plots within grid
+gridExtra::grid.arrange(bxp_ENMO_activities, bxp_MAD_activities, nrow=2) #arranges plots within grid
 
-boxplots <- gridExtra::arrangeGrob(bxp_ENMO + ggplot2::theme(legend.position="top"),
-                                   bxp_MAD + ggplot2::theme(legend.position="none"),
-                                   nrow=2) # generates plot
-plot(boxplots) #print the plot
-ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/categories/boxplot_categories.png"), boxplots, width = 10, height = 8, dpi = 600) #saves g
+boxplots_activities <- gridExtra::arrangeGrob(bxp_ENMO_activities + ggplot2::theme(legend.position="top"),
+                                              bxp_MAD_activities + ggplot2::theme(legend.position="none"),
+                                   nrow=2, 
+                                   heights = c(4.5, 3)) # generates plot
+plot(boxplots_activities) #print the plot
+ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/categories/boxplot_categories.png"), boxplots_activities, width = 10, height = 8, dpi = 600) #saves g
 
 ### 24-hour movement distributions
-bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "behavior", order_categories = c("PA", "SB", "sleep"))
-bxp_ENMO
-bxp_MAD <- create.boxplot(data_long = df_long.MAD, metric = "MAD", per = "behavior", order_categories = c("PA", "SB", "sleep"))
-bxp_MAD
+bxp_ENMO_behaviors <- ggplot2::ggplot(df_long.ENMO, ggplot2::aes(y = value, x = as.factor(behavior), fill =metric), alpha = 0.35) + 
+  ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.55) + ggplot2::theme_classic() +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
+  ggplot2::scale_x_discrete(limits = c("PA", "SB", "sleep")) + ggplot2::xlab("") + 
+  ggplot2::ylab(expression(paste("ENMO (m", italic("g"), ")"))) +
+  ggplot2::scale_fill_manual(values = c("#440154FF", "#FDE725FF"), name = "Accelerometer placement", labels = c("Hip", "Wrist"))+
+  ggplot2::ylim(0,150) 
 
-combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "boxplot_behaviors.png")
+bxp_MAD_behaviors <- ggplot2::ggplot(df_long.MAD, ggplot2::aes(y = value, x = as.factor(behavior), fill =metric)) + 
+  ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.55) + ggplot2::theme_classic() +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
+  ggplot2::scale_x_discrete(limits = c("PA", "SB", "sleep")) + ggplot2::xlab("24-h movement behaviors") + 
+  ggplot2::ylab(expression(paste("MAD (m", italic("g"), ")"))) +
+  ggplot2::scale_fill_manual(values = c("#440154FF", "#FDE725FF"), name = "Accelerometer placement", labels = c("Hip", "Wrist"))+
+  ggplot2::ylim(0,150) 
+
+gridExtra::grid.arrange(bxp_ENMO_behaviors, bxp_MAD_behaviors, nrow=2) #arranges plots within grid
+
+boxplots_behaviors <- gridExtra::arrangeGrob(bxp_ENMO_behaviors + ggplot2::theme(legend.position="top"),
+                                             bxp_MAD_behaviors + ggplot2::theme(legend.position="none"),
+                                              nrow=2, 
+                                              heights = c(4.5, 3)) # generates plot
+ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/behaviors/boxplot_behaviors.png"), boxplots_behaviors, width = 10, height = 8, dpi = 600) #saves g
+
+### Combine plots
+bxp_MAD_act <- ggplot2::ggplot(df_long.MAD, ggplot2::aes(y = value, x = as.factor(activity), fill =metric)) + 
+  ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.55) + ggplot2::theme_classic() +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
+  ggplot2::scale_x_discrete(limits = level_order, labels = level_labels) + ggplot2::xlab("") + 
+  ggplot2::ylab(expression(paste("MAD (m", italic("g"), ")"))) +
+  ggplot2::scale_fill_manual(values = c("#440154FF", "#FDE725FF"), name = "Accelerometer placement", labels = c("Hip", "Wrist"))+
+  ggplot2::ylim(0,150) 
+
+boxplots_act <- gridExtra::arrangeGrob(bxp_ENMO_activities + ggplot2::theme(legend.position="none"),
+                                       bxp_MAD_act + ggplot2::theme(legend.position="none"),
+                                              ncol=2) # generates plot
+
+xlabel <- grid::textGrob("App activities", gp = grid::gpar(fontsize = 12))
+
+boxplots <- gridExtra::grid.arrange(boxplots_behaviors, boxplots_act, xlabel, nrow=3, heights = c(4, 4, 0.5)) #arranges plots within grid
+
+ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/boxplot_combined.png"), boxplots, width = 10, height = 8, dpi = 600) #saves g
+
+#combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "boxplot_behaviors.png")
 
 #### STEP 2: Test for differences in acceleration (use g-units instead of mg)
 # Transform acceleration data
@@ -121,7 +161,7 @@ qqnorm(residuals(acc_act_act_id.loghipENMO))
 
 # Report fitted model based on transformed data
 rm(acc_act_act_id.hipENMO)
-#summary(acc_act_act_id.hipENMO)
+#summary(acc_act_act_id.loghipENMO)
 car::Anova(acc_act_act_id.loghipENMO)
 jtools::summ(acc_act_act_id.loghipENMO)
 report::report_table(acc_act_act_id.loghipENMO)
@@ -168,7 +208,7 @@ qqnorm(residuals(acc_act_act_id.loghipMAD))
 
 # Report fitted model based on transformed data
 rm(acc_act_act_id.hipMAD)
-#summary(acc_act_act_id.hipMAD)
+#summary(acc_act_act_id.loghipMAD)
 car::Anova(acc_act_act_id.loghipMAD)
 jtools::summ(acc_act_act_id.loghipMAD)
 report::report_table(acc_act_act_id.loghipMAD)
@@ -185,7 +225,7 @@ acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activit
 report::report_table(acc_act_act_id.loghipMAD)
 jtools::summ(acc_act_act_id.loghipMAD)
 
-### Wrist placement 
+### Wrist placement  #####Hier gebleven
 ## ENMO
 # Un-transformed data
 acc_act.wristENMO <- glm(ENMO.wrist/1000 ~ forcats::fct_relevel(activity, ref = "sleeping"), data = data.pp)
@@ -436,19 +476,83 @@ acc_beh_id_beh.logwristMAD <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_releve
 
 
 #### STEP 4: Test for differences in acceleration between movement behaviors when labeling of behavior changes
+# Remove passive transport
+data.pp.withoutpt <- data.pp[-which(data.pp$activity == "passivetransport"),]
 # Using log transformed data
+### Standard model without passive transport
+
+loghipENMO.model1 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp.withoutpt)
+loghipENMO.model1.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp.withoutpt, REML = FALSE)
+anova(loghipENMO.model1, loghipENMO.model1.id, test="Chisq")
+rm(loghipENMO.model1)
+loghipENMO.model1.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp.withoutpt, REML = TRUE)
+anova(loghipENMO.model1.id, loghipENMO.model1.id.beh, test="Chisq")
+rm(loghipENMO.model1.id)
+
+jtools::summ(loghipENMO.model1.id.beh)
+
+## Hip MAD
+loghipMAD.model1 <- glm(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp.withoutpt)
+loghipMAD.model1.id <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp.withoutpt, REML = FALSE)
+anova(loghipMAD.model1, loghipMAD.model1.id, test="Chisq")
+rm(loghipMAD.model1)
+loghipMAD.model1.id.beh <- lme4::lmer(logMAD.hip/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp.withoutpt, REML = TRUE)
+anova(loghipMAD.model1.id, loghipMAD.model1.id.beh, test="Chisq")
+rm(loghipMAD.model1.id)
+
+jtools::summ(loghipMAD.model1.id.beh)
+
+anova(acc_beh_id_beh.loghipENMO, loghipMAD.model1.id.beh, test="Chisq")
+
+
+## Wrist ENMO
+logwristENMO.model1 <- glm(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp.withoutpt)
+logwristENMO.model1.id <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp.withoutpt, REML = FALSE)
+anova(logwristENMO.model1, logwristENMO.model1.id, test="Chisq")
+rm(logwristENMO.model1)
+logwristENMO.model1.id.beh <- lme4::lmer(logENMO.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp.withoutpt, REML = TRUE)
+anova(logwristENMO.model1.id, logwristENMO.model1.id.beh, test="Chisq")
+rm(logwristENMO.model1.id)
+
+jtools::summ(logwristENMO.model1.id.beh)
+
+## Wrist MAD
+logwristMAD.model1 <- glm(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep"), data = data.pp.withoutpt)
+logwristMAD.model1.id <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID), data = data.pp.withoutpt, REML = FALSE)
+anova(logwristMAD.model1, logwristMAD.model1.id, test="Chisq")
+rm(logwristMAD.model1)
+logwristMAD.model1.id.beh <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "sleep")  + (1 | castorID/behavior), data = data.pp.withoutpt, REML = TRUE)
+anova(logwristMAD.model1.id, logwristMAD.model1.id.beh, test="Chisq")
+rm(logwristMAD.model1.id)
+
+jtools::summ(logwristMAD.model1.id.beh)
+
 ### 2. Sitting without support: PA (model 1) -> SB
-index_sitting <- which(data.pp$posture == "sitting_withoutsupport")
+# index_sitting <- which(data.pp$posture == "sitting_withoutsupport")
+# length(index_sitting)
+# data.pp$behavior2 <- data.pp$behavior
+# data.pp$behavior2[index_sitting] <- "SB"
+index_sitting <- which(data.pp.withoutpt$posture == "sitting_withoutsupport")
 length(index_sitting)
-data.pp$behavior2 <- data.pp$behavior
-data.pp$behavior2[index_sitting] <- "SB"
+data.pp.withoutpt$behavior2 <- data.pp.withoutpt$behavior
+data.pp.withoutpt$behavior2[index_sitting] <- "SB"
 
 ## Hip ENMO
-loghipENMO.model2 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp)
-loghipENMO.model2.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+# loghipENMO.model2 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp)
+# loghipENMO.model2.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+# anova(loghipENMO.model2, loghipENMO.model2.id, test="Chisq")
+# rm(loghipENMO.model2)
+# loghipENMO.model2.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp, REML = TRUE)
+# anova(loghipENMO.model2.id, loghipENMO.model2.id.beh, test="Chisq")
+# rm(loghipENMO.model2.id)
+# 
+# jtools::summ(loghipENMO.model2.id.beh)
+
+loghipENMO.model2 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep"), data = data.pp.withoutpt)
+loghipENMO.model2.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID), data = data.pp.withoutpt, REML = FALSE)
 anova(loghipENMO.model2, loghipENMO.model2.id, test="Chisq")
 rm(loghipENMO.model2)
-loghipENMO.model2.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp, REML = TRUE)
+loghipENMO.model2.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior2, ref = "sleep")  + (1 | castorID/behavior2), data = data.pp.withoutpt, REML = TRUE)
 anova(loghipENMO.model2.id, loghipENMO.model2.id.beh, test="Chisq")
 rm(loghipENMO.model2.id)
 
@@ -747,16 +851,30 @@ rm(logwristMAD.model8.id)
 jtools::summ(logwristMAD.model8.id.beh)
 
 ### 9. Playing calm: SB (model 1) -> PA
+
 length(index_calmplay)
-data.pp$behavior9 <- data.pp$behavior
-data.pp$behavior9[index_calmplay] <- "PA"
+data.pp.withoutpt$behavior9 <- data.pp.withoutpt$behavior
+data.pp.withoutpt$behavior9[index_calmplay] <- "PA"
+# length(index_calmplay)
+# data.pp$behavior9 <- data.pp$behavior
+# data.pp$behavior9[index_calmplay] <- "PA"
 
 ## Hip ENMO
-loghipENMO.model9 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp)
-loghipENMO.model9.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+# loghipENMO.model9 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp)
+# loghipENMO.model9.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp, REML = FALSE)
+# anova(loghipENMO.model9, loghipENMO.model9.id, test="Chisq")
+# rm(loghipENMO.model9)
+# loghipENMO.model9.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp, REML = TRUE)
+# anova(loghipENMO.model9.id, loghipENMO.model9.id.beh, test="Chisq")
+# rm(loghipENMO.model9.id)
+# 
+# jtools::summ(loghipENMO.model9.id.beh)
+
+loghipENMO.model9 <- glm(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep"), data = data.pp.withoutpt)
+loghipENMO.model9.id <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID), data = data.pp.withoutpt, REML = FALSE)
 anova(loghipENMO.model9, loghipENMO.model9.id, test="Chisq")
 rm(loghipENMO.model9)
-loghipENMO.model9.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp, REML = TRUE)
+loghipENMO.model9.id.beh <- lme4::lmer(logENMO.hip/1000 ~ forcats::fct_relevel(behavior9, ref = "sleep")  + (1 | castorID/behavior9), data = data.pp.withoutpt, REML = TRUE)
 anova(loghipENMO.model9.id, loghipENMO.model9.id.beh, test="Chisq")
 rm(loghipENMO.model9.id)
 
@@ -845,3 +963,48 @@ rm(logwristMAD.model10.id)
 
 jtools::summ(logwristMAD.model10.id.beh)
 
+
+#Correlations between categories
+data.pp.cor <- data.pp[!is.na(data.pp$behavior),]
+
+## HIP
+#ENMO
+
+
+data.pp.cor.enmohip <- data.pp.cor[!is.na(data.pp.cor$logENMO.hip),]
+
+data.pp.cor.enmohip_pasb <- data.pp.cor.enmohip[-which(data.pp.cor.enmohip$behavior == "sleep"),]
+Rpa <-ifelse(data.pp.cor.enmohip_pasb$behavior=="PA",1,0)
+Rsb <-ifelse(data.pp.cor.enmohip$behavior=="SB",1,0)
+Rsleep <-ifelse(data.pp.cor.enmohip$behavior=="sleep",1,0)
+ltm::biserial.cor(data.pp.cor.enmohip_pasb$logENMO.hip, Rpa)
+ltm::biserial.cor(data.pp.cor.enmohip$logENMO.hip, Rsb)
+ltm::biserial.cor(data.pp.cor.enmohip$logENMO.hip, Rsleep)
+
+#MAD
+data.pp.cor.madhip <- data.pp.cor[!is.na(data.pp.cor$logMAD.hip),]
+Rpa <-ifelse(data.pp.cor.madhip$behavior=="PA",1,0)
+Rsb <-ifelse(data.pp.cor.madhip$behavior=="SB",1,0)
+Rsleep <-ifelse(data.pp.cor.madhip$behavior=="sleep",1,0)
+ltm::biserial.cor(data.pp.cor.madhip$logMAD.hip, Rpa)
+ltm::biserial.cor(data.pp.cor.madhip$logMAD.hip, Rsb)
+ltm::biserial.cor(data.pp.cor.madhip$logMAD.hip, Rsleep)
+
+## WRIST
+#ENMO
+data.pp.cor.enmowrist <- data.pp.cor[!is.na(data.pp.cor$logENMO.wrist),]
+Rpa <-ifelse(data.pp.cor.enmowrist$behavior=="PA",1,0)
+Rsb <-ifelse(data.pp.cor.enmowrist$behavior=="SB",1,0)
+Rsleep <-ifelse(data.pp.cor.enmowrist$behavior=="sleep",1,0)
+ltm::biserial.cor(data.pp.cor.enmowrist$logENMO.wrist, Rpa)
+ltm::biserial.cor(data.pp.cor.enmowrist$logENMO.wrist, Rsb)
+ltm::biserial.cor(data.pp.cor.enmowrist$logENMO.wrist, Rsleep)
+
+#MAD
+data.pp.cor.madwrist <- data.pp.cor[!is.na(data.pp.cor$logMAD.wrist),]
+Rpa <-ifelse(data.pp.cor.madwrist$behavior=="PA",1,0)
+Rsb <-ifelse(data.pp.cor.madwrist$behavior=="SB",1,0)
+Rsleep <-ifelse(data.pp.cor.madwrist$behavior=="sleep",1,0)
+ltm::biserial.cor(data.pp.cor.madwrist$logMAD.wrist, Rpa)
+ltm::biserial.cor(data.pp.cor.madwrist$logMAD.wrist, Rsb)
+ltm::biserial.cor(data.pp.cor.madwrist$logMAD.wrist, Rsleep)

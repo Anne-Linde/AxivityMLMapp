@@ -1,5 +1,5 @@
 ## This script was used to:
-# 1) Synchronize the axivity data to the app entries (as described in section 2.8.3.1 of the article)
+# 1) Synchronize the Axivity data to the app entries (as described in section 2.4.3.1 of the article)
 # 2) Report the duration, frequency and acceleration per activity category over all reported categories and 24-h movement behaviors
 # 3) Report descriptives overlap accelerometers and app
 
@@ -10,8 +10,8 @@ gc()
 date <- "20231031" # Date of last data update
 tz = "Europe/Amsterdam"
 # Use preprocessed Axivity data (data without non-wear)
-filepath.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/hip/nonwear_removed"
-filepath.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/wrist/nonwear_removed"
+filepath.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/hip/nonwear_removed"
+filepath.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/wrist/nonwear_removed"
 # Use app data activities
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
 filename.app <- paste0("/", date, "_activities_castor_linked_duration.csv")
@@ -144,7 +144,7 @@ quantile(data.pp$MAD.wrist[which(data.pp$activity == "dontknow")], na.rm = TRUE)
 desc_sittinglying <- data.pp[data.pp$activity == "sittinglying",] %>% group_by(posture) %>% 
   summarise(dur = median(total_duration, na.rm = TRUE),
             freq = n(),
-            per =  n() / nrow(data.pp) * 100,
+            per =  n() / sum(desc_sittinglying$freq) * 100,
             ENMO.hip = median(ENMO.hip, na.rm = TRUE),
             MAD.hip = median(MAD.hip, na.rm = TRUE),
             ENMO.wrist = median(ENMO.wrist, na.rm = TRUE),
@@ -215,7 +215,7 @@ quantile(data.pp$MAD.wrist[which(data.pp$activity == "sittinglying" & data.pp$po
 desc_calmplay <- data.pp[data.pp$activity == "quietplay",] %>% group_by(posture) %>% 
   summarise(dur = median(total_duration, na.rm = TRUE),
             freq = n(),
-            per =  n() / nrow(data.pp) * 100,
+            per =  n() / sum(desc_calmplay$freq) * 100,
             ENMO.hip = median(ENMO.hip, na.rm = TRUE),
             MAD.hip = median(MAD.hip, na.rm = TRUE),
             ENMO.wrist = median(ENMO.wrist, na.rm = TRUE),
@@ -298,7 +298,7 @@ quantile(data.pp$MAD.wrist[which(data.pp$activity == "quietplay" & data.pp$postu
 desc_activeplay <- data.pp[data.pp$activity == "activeplay",] %>% group_by(posture) %>% 
   summarise(dur = median(total_duration, na.rm = TRUE),
             freq = n(),
-            per =  n() / nrow(data.pp) * 100,
+            per =  n() / sum(desc_activeplay$freq) * 100,
             ENMO.hip = median(ENMO.hip, na.rm = TRUE),
             MAD.hip = median(MAD.hip, na.rm = TRUE),
             ENMO.wrist = median(ENMO.wrist, na.rm = TRUE),
@@ -375,7 +375,7 @@ quantile(data.pp$MAD.wrist[which(data.pp$activity == "activeplay" & data.pp$post
 desc_unknownplay <- data.pp[data.pp$activity == "dontknowplay",] %>% group_by(posture) %>% 
   summarise(dur = median(total_duration, na.rm = TRUE),
             freq = n(),
-            per =  n() / nrow(data.pp) * 100,
+            per =  n() / sum(desc_unknownplay$freq) * 100,
             ENMO.hip = median(ENMO.hip, na.rm = TRUE),
             MAD.hip = median(MAD.hip, na.rm = TRUE),
             ENMO.wrist = median(ENMO.wrist, na.rm = TRUE),
@@ -401,7 +401,6 @@ quantile(data.pp$ENMO.wrist[which(data.pp$activity == "dontknowplay" & data.pp$p
 quantile(data.pp$MAD.wrist[which(data.pp$activity == "dontknowplay" & data.pp$posture == "alternating")], na.rm = TRUE)
 # I don't know
 quantile(data.pp$total_duration[which(data.pp$activity == "dontknowplay" & data.pp$posture == "dontknow")], na.rm = TRUE)
-
 quantile(data.pp$ENMO.hip[which(data.pp$activity == "dontknowplay" & data.pp$posture == "dontknow")], na.rm = TRUE)
 quantile(data.pp$MAD.hip[which(data.pp$activity == "dontknowplay" & data.pp$posture == "dontknow")], na.rm = TRUE)
 quantile(data.pp$ENMO.wrist[which(data.pp$activity == "dontknowplay" & data.pp$posture == "dontknow")], na.rm = TRUE)
