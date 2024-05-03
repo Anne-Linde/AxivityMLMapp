@@ -82,13 +82,13 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
             df_wrist$xmax <- as.POSIXct(xmax, origin = "1970-01-01")
             df_wrist$col <- col
             
-            figure_labels = c("personal care", "Active play", "Sitting/lying", "Sleeping", "Eating/drinking", "Calm play", "Passive transport")
+            figure_labels = c("Personal care", "Active play", "Sitting/lying", "Sleeping", "Eating/drinking", "Calm play", "Passive transport")
             g_wrist <- ggplot2::ggplot() + 
               ggplot2::geom_line(data = data.wrist_day, ggplot2::aes(data.wrist_day$timestamp, data.wrist_day$ENMO, group = data.wrist_day$activity)) + 
               ggplot2::geom_rect(data = df_wrist, mapping=ggplot2::aes(xmin = anytime::anytime(xmin), xmax = anytime::anytime(xmax), ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 
               ggplot2::theme_classic() + 
-              #ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = figure_labels) +
-              ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
+              ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = figure_labels) +
+              #ggplot2::scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
               ggplot2::scale_y_continuous(name="Wrist") +
               ggplot2::xlab("Time (hh:mm:ss)") #, labels = function(x) strftime(as.POSIXct(x, origin = "1970-01-01"), format = "%H:%M:%S")) +
       
