@@ -512,10 +512,10 @@ ICC.wrist.ENMO <- cbind(ICC.wrist.ENMO, sb.wrist.ENMO)
 colnames(ICC.wrist.ENMO) <- c("ICC", "LB", "UB", "SB70")
 write.csv(ICC.wrist.ENMO, file = paste0(savedir, "Axivity/wrist/ICC_Spearman_ENMO.csv"))
 
-rownames(ICC.wrist.ENMO) <- hours
+rownames(ICC.wrist.MAD) <- hours
 ICC.wrist.MAD <- cbind(ICC.wrist.MAD, sb.wrist.MAD)
 colnames(ICC.wrist.MAD) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.wrist.ENMO, file = paste0(savedir, "Axivity/wrist/ICC_Spearman_MAD.csv"))
+write.csv(ICC.wrist.MAD, file = paste0(savedir, "Axivity/wrist/ICC_Spearman_MAD.csv"))
 ```
 
 
