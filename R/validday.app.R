@@ -51,6 +51,7 @@ validday.app <- function(data, minhours = 12, mindays = 7, savedir, CoDa = TRUE)
   }
   filename = paste0("valid_data_", minhours, "h", mindays, "d.RData")
   save(valid_data, file = paste(savedir, filename, sep = "/")) # Save data that meets the valid day criterion
+  write.csv(valid_data, file = paste(savedir, paste0("valid_data_", minhours, "h", mindays, "d.csv"), sep = "/")) # Save data that meets the valid day criterion
   
   return(valid_data)
 }
