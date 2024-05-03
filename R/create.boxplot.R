@@ -26,11 +26,12 @@ create.boxplot <- function(data_long, metric, per, order_categories){
     ylabel = expression(paste("MAD (m", italic("g"), ")"))
   
   bxp <- ggplot2::ggplot(data_long, ggplot2::aes(y = value, x = as.factor(grouping), fill =metric)) + 
-    ggplot2::geom_boxplot(outlier.shape = 19, outlier.alpha = 0.1) + ggplot2::theme_classic() +
+    ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.55) + ggplot2::theme_classic() +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), legend.position="top") +
     ggplot2::scale_x_discrete(limits = order_categories) + ggplot2::xlab("") + 
     ggplot2::ylab(ylabel) +
-    ggplot2::scale_fill_discrete(name = "Accelerometer placement", labels = c("Hip", "Wrist"))
+    ggplot2::scale_fill_manual(values = c("#440154FF", "#FDE725FF"), name = "Accelerometer placement", labels = c("Hip", "Wrist"))+
+    ggplot2::ylim(0,150) 
   
   return(bxp)
 }

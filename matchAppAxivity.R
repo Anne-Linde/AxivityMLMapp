@@ -22,7 +22,7 @@ savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Litt
 
 # source functions directly from file, to be replaced by package installation:
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
-for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
+for (function_file in dir(my_functions_folder, full.names = TRUE)) source(function_file) #load functions
 
 ## Load app data
 data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data

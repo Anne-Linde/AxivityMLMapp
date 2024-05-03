@@ -9,7 +9,9 @@ output:
 
 This document presents the output of the data synchronization between the My Little Moves app and accelerometer data.
 
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE}
+rm(list = ls())
+gc()
 knitr::opts_chunk$set(echo = TRUE)
 date <- "20231010" # Date 
 tz = "Europe/Amsterdam"
@@ -19,6 +21,7 @@ filepath.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/
 # Use app data activities
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
 filename.app <- "/20230918_activities_castor_linked_duration.csv"
+filename.app.day <- "/20230918_MLMapp_pp_duration_frequency_day.csv"
 # Path to directory to save the data list
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output"
 
@@ -28,6 +31,10 @@ for (function_file in dir(my_functions_folder, full.names = T)) source(function_
 
 ## Load data
 data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data
+data.app.day <- read.csv(paste0(filepath.app, filename.app.day))[,-1] # Load app data/day
+data.app.day <- data.app.day[which(data.app.day$castorID %in% unique(data.app$castorID)),]
+data.app.day <- data.app.day[which(data.app.day$measurement == 1),]
+
 rm(filepath.app, filename.app, my_functions_folder, function_file)
 # Set up for plots
 level_order <- c("actiefverplaatsen", "passiefverplaatsen", "actiefspelen", "rustigspelen", "weetnietspelen", 
@@ -60,36 +67,160 @@ df_long <- tidyr::gather(data.app.axivity, metric, value, ENMO.hip:MAD.wrist)
 #df_long <- tidyr::gather(data.app.axivity, metric, value, ENMO.hip:MAD.both)
 df_long.ENMO <- df_long[which(startsWith(df_long$metric, "ENMO")),]
 df_long.MAD <- df_long[which(startsWith(df_long$metric, "MAD")),]
+
+## Calculate metrics per day per activity
+df_long_activity_ENMOhip <- data.frame(matrix(NA, nrow = length(unique(data.app.axivity$castorID))*7, 
+                                     ncol = 4 + length(unique(data.app.axivity$activity))))
+df_long_activity_ENMOwrist <- df_long_activity_ENMOhip
+df_long_activity_MADhip <- df_long_activity_ENMOhip
+df_long_activity_MADwrist <- df_long_activity_ENMOhip
+names <- c("castorID", "cohort", "date", "measurement", unique(data.app.axivity$activity))
+colnames(df_long_activity_ENMOhip) <- names
+colnames(df_long_activity_ENMOwrist) <- names
+colnames(df_long_activity_MADhip) <- names
+colnames(df_long_activity_MADwrist) <- names
+
+df_long_behavior_ENMOhip <- data.frame(matrix(NA, nrow = length(unique(data.app.axivity$castorID))*7, 
+                                     ncol = 4 + length(unique(data.app.axivity$behavior))))
+df_long_behavior_ENMOwrist <- df_long_behavior_ENMOhip
+df_long_behavior_MADhip <- df_long_behavior_ENMOhip
+df_long_behavior_MADwrist <- df_long_behavior_ENMOhip
+names <- c("castorID", "cohort", "date", "measurement", unique(data.app.axivity$behavior))
+colnames(df_long_behavior_ENMOhip) <- names
+colnames(df_long_behavior_ENMOwrist) <- names
+colnames(df_long_behavior_MADhip) <- names
+colnames(df_long_behavior_MADwrist) <- names
+
+counter = 1
+
+for (m in 1:length(unique(data.app.axivity$measurement))){
+  data_m <- data.app.axivity[data.app.axivity$measurement == unique(data.app.axivity$measurement)[m],]
+  for(pp in 1:length(unique(data_m$castorID))){
+  data_pp <- data_m[data_m$castorID == unique(data_m$castorID)[pp],]
+  days <- unique(data_pp$date)
+  for (day in 1:length(days)){
+    df_long_activity_ENMOhip$castorID[counter] <- unique(data_pp$castorID)
+    df_long_activity_ENMOhip$cohort[counter] <- unique(data_pp$cohort)
+    df_long_activity_ENMOhip$measurement[counter] <- unique(data_pp$measurement)
+    df_long_activity_ENMOhip$date[counter] <- days[day]
+    df_long_activity_ENMOwrist[counter,] <- df_long_activity_ENMOhip[counter,]
+    df_long_activity_MADhip[counter,] <- df_long_activity_ENMOhip[counter,]
+    df_long_activity_MADwrist[counter,] <- df_long_activity_ENMOhip[counter,]
+    df_long_behavior_ENMOhip$castorID[counter] <- unique(data_pp$castorID)
+    df_long_behavior_ENMOhip$cohort[counter] <- unique(data_pp$cohort)
+    df_long_behavior_ENMOhip$measurement[counter] <- unique(data_pp$measurement)
+    df_long_behavior_ENMOhip$date[counter] <- days[day]
+    df_long_behavior_ENMOwrist[counter,] <- df_long_behavior_ENMOhip[counter,]
+    df_long_behavior_MADhip[counter,] <- df_long_behavior_ENMOhip[counter,]
+    df_long_behavior_MADwrist[counter,] <- df_long_behavior_ENMOhip[counter,]
+
+    tmp <-   data_pp[data_pp$date == days[day],]
+    activities <- unique(tmp$activity)
+    for(a in 1:length(activities)){
+      act <- tmp[tmp$activity == activities[a],]
+      df_long_activity_ENMOhip[counter,which(colnames(df_long_activity_ENMOhip) == activities[a])] <- median(act$ENMO.hip, na.rm = TRUE)
+      df_long_activity_ENMOwrist[counter,which(colnames(df_long_activity_ENMOwrist) == activities[a])] <- median(act$ENMO.wrist, na.rm = TRUE)
+      df_long_activity_MADhip[counter,which(colnames(df_long_activity_MADhip) == activities[a])] <- median(act$MAD.hip, na.rm = TRUE)
+      df_long_activity_MADwrist[counter,which(colnames(df_long_activity_MADwrist) == activities[a])] <- median(act$MAD.wrist, na.rm = TRUE)
+      
+      behavior <- unique(act$behavior)
+      for(b in 1:length(behavior)){
+        df_long_behavior_ENMOhip[counter,which(colnames(df_long_behavior_ENMOhip) == behavior[b])] <- median(act$ENMO.hip, na.rm = TRUE)
+      df_long_behavior_ENMOwrist[counter,which(colnames(df_long_behavior_ENMOwrist) == behavior[b])] <- median(act$ENMO.wrist, na.rm = TRUE)
+      df_long_behavior_MADhip[counter,which(colnames(df_long_behavior_MADhip) == behavior[b])] <- median(act$MAD.hip, na.rm = TRUE)
+      df_long_behavior_MADwrist[counter,which(colnames(df_long_behavior_MADwrist) ==  behavior[b])] <- median(act$MAD.wrist, na.rm = TRUE)
+      }
+    }
+  counter = counter + 1  
+  }
+}
+}
+df_long_activity_ENMOhip<- df_long_activity_ENMOhip[-which(is.na(df_long_activity_ENMOhip$castorID)),]
+df_long_activity_ENMOwrist<- df_long_activity_ENMOwrist[-which(is.na(df_long_activity_ENMOwrist$castorID)),]
+df_long_activity_MADhip<- df_long_activity_MADhip[-which(is.na(df_long_activity_MADhip$castorID)),]
+df_long_activity_MADwrist<- df_long_activity_MADwrist[-which(is.na(df_long_activity_MADwrist$castorID)),]
+df_long_behavior_ENMOhip<- df_long_behavior_ENMOhip[-which(is.na(df_long_behavior_ENMOhip$castorID)),]
+df_long_behavior_ENMOwrist<- df_long_behavior_ENMOwrist[-which(is.na(df_long_behavior_ENMOwrist$castorID)),]
+df_long_behavior_MADhip<- df_long_behavior_MADhip[-which(is.na(df_long_behavior_MADhip$castorID)),]
+df_long_behavior_MADwrist<- df_long_behavior_MADwrist[-which(is.na(df_long_behavior_MADwrist$castorID)),]
+ 
+# df_long_activity_ENMOhip$metric <- as.factor(rep("ENMO", nrow(df_long_activity_ENMOhip)))
+# df_long_activity_ENMOhip$placement <- as.factor(rep("hip", nrow(df_long_activity_ENMOhip)))
+# df_long_activity_ENMOwrist$metric <- as.factor(rep("ENMO", nrow(df_long_activity_ENMOwrist)))
+# df_long_activity_ENMOwrist$placement <- as.factor(rep("wrist", nrow(df_long_activity_ENMOwrist)))
+# df_long_activity_MADhip$metric <- as.factor(rep("MAD", nrow(df_long_activity_MADhip)))
+# df_long_activity_MADhip$placement <- as.factor(rep("hip", nrow(df_long_activity_MADhip)))
+# df_long_activity_MADwrist$metric <- as.factor(rep("MAD", nrow(df_long_activity_MADwrist)))
+# df_long_activity_MADwrist$placement <- as.factor(rep("wrist", nrow(df_long_activity_MADwrist)))
+# 
+# df_long_activity <- rbind(df_long_activity_ENMOhip, df_long_activity_ENMOwrist, df_long_activity_MADhip, df_long_activity_MADwrist)
+
+long_ENMOhip <- data.table::melt(df_long_activity_ENMOhip, id.vars = c("castorID", "date", "cohort", "measurement"), variable.name = "activity")
+long_ENMOwrist <- data.table::melt(df_long_activity_ENMOwrist, id.vars = c("castorID", "date", "cohort", "measurement"), variable.name = "activity")
+long_MADhip <- data.table::melt(df_long_activity_MADhip, id.vars = c("castorID", "date", "cohort", "measurement"), variable.name = "activity")
+long_MADwrist <- data.table::melt(df_long_activity_MADwrist, id.vars = c("castorID", "date", "cohort", "measurement"), variable.name = "activity")
+
+ # write.csv(df_long_activity_metrics, paste0(savedir, "/", date, "_app.ax.long_activity.csv"))
+#  write.csv(df_long_behavior_metrics, paste0(savedir, "/", date, "_app.ax.long_behavior.csv"))
+
 ```
 
+
+### Overlay plot
+```{r Overlay plots}
+
+for(pp in 1:length(unique(data.app.day$castorID))){
+  create.overlayplot(data.app, filepath.hip, filepath.wrist, data.app.day$castorID[pp], savedir)
+}
+
+```
+
+
+### Descriptive statistics
 ## Per activity category
 
 This section presents the results per activity category.
 
 ```{r Descriptive statistics category, echo=FALSE}
 library(dplyr)
-desc_categories <- data.app.axivity %>% 
+desc_day_enmohip <- long_ENMOhip %>% 
   group_by(activity) %>% 
-  summarize(Mduration = median(total_duration),
-            LL = quantile(total_duration, .25),
-            UL = quantile(total_duration, .75),
-            Menmo.hip = median(ENMO.hip, na.rm = TRUE),
-            LLenmo.hip = quantile(ENMO.hip, .25, na.rm = TRUE),
-            ULenmo.hip = quantile(ENMO.hip, .75, na.rm = TRUE),
-            Menmo.wrist = median(ENMO.wrist, na.rm = TRUE),
-            LLenmo.wrist = quantile(ENMO.wrist, .25, na.rm = TRUE),
-            ULenmo.wrist = quantile(ENMO.wrist, .75, na.rm = TRUE),
-            Mmad.hip = median(MAD.hip, na.rm = TRUE),
-            LLmad.hip = quantile(MAD.hip, .25, na.rm = TRUE),
-            ULmad.hip = quantile(MAD.hip, .75, na.rm = TRUE),
-            Mmad.wrist = median(MAD.wrist, na.rm = TRUE),
-            LLmad.wrist = quantile(MAD.wrist, .25, na.rm = TRUE),
-            ULmad.wrist = quantile(MAD.wrist, .75, na.rm = TRUE),
-            n = n(), 
-            ) %>% 
-            mutate(percent = n / sum(n)*100)
-desc_categories
+    summarize(M = median(value, na.rm = TRUE),
+            LL = quantile(value, .25, na.rm = TRUE),
+            UL = quantile(value, .75, na.rm = TRUE),
+            )
+desc_day_enmohip
+
+desc_day_madhip <- long_MADhip %>% 
+  group_by(activity) %>% 
+    summarize(M = median(value, na.rm = TRUE),
+            LL = quantile(value, .25, na.rm = TRUE),
+            UL = quantile(value, .75, na.rm = TRUE),
+            )
+desc_day_madhip
+
+library(dplyr)
+desc_day_enmowrist <- long_ENMOwrist %>% 
+  group_by(activity) %>% 
+    summarize(M = median(value, na.rm = TRUE),
+            LL = quantile(value, .25, na.rm = TRUE),
+            UL = quantile(value, .75, na.rm = TRUE),
+            )
+desc_day_enmowrist
+
+desc_day_madwrist <- long_MADwrist %>% 
+  group_by(activity) %>% 
+    summarize(M = median(value, na.rm = TRUE),
+            LL = quantile(value, .25, na.rm = TRUE),
+            UL = quantile(value, .75, na.rm = TRUE),
+            )
+desc_day_madwrist
+
+#Load app data /day statistics
+desc_categories_Freq <- summary(aggregate(data.app.day[,22:36], by=list(data.app.day$castorID),  FUN=mean, na.rm=TRUE))
+desc_categories_time <- summary(aggregate(data.app.day[,7:21], by=list(data.app.day$castorID),  FUN=mean, na.rm=TRUE))
 ```
+
 ```{r Boxplot categories, echo=FALSE}
 bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "activity", order_categories = level_order)
 bxp_ENMO
@@ -98,19 +229,7 @@ bxp_MAD
 
 combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "boxplot_categories.png")
 ```
-```{r Scatterplot categories, echo=FALSE}
-scatter_ENMO.hip <- create.scatterplot(data = data.app.axivity, metric = "ENMO", placement = "hip", per = "activity", order_categories = level_order)
-plot(scatter_ENMO.hip)
-scatter_ENMO.wrist <- create.scatterplot(data = data.app.axivity, metric = "ENMO", placement = "wrist", per = "activity", order_categories = level_order)
-plot(scatter_ENMO.wrist)
-combine.save.plots(scatter_ENMO.hip, scatter_ENMO.wrist, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_ENMO_categories.png")
 
-scatter_MAD.hip <- create.scatterplot(data = data.app.axivity, metric = "MAD", placement = "hip", per = "activity", order_categories = level_order)
-plot(scatter_MAD.hip)
-scatter_MAD.wrist <- create.scatterplot(data = data.app.axivity, metric = "MAD", placement = "wrist", per = "activity", order_categories = level_order)
-plot(scatter_MAD.wrist)
-combine.save.plots(scatter_MAD.hip, scatter_MAD.wrist, format = "scatterplots", savedir = paste0(savedir, "/plots/distributions/categories/"), filename = "scatter_MAD_categories.png")
-```
 ```{r Density plots categories, echo = FALSE}
 density_ENMO.hip <- create.densityplot(data = data.app.axivity, metric = "ENMO", placement = "hip", per = "activity", order_categories = level_order)
 plot(density_ENMO.hip)
@@ -342,9 +461,9 @@ desc_behaviors
 ```
 
 ```{r Boxplot behaviors, echo=FALSE}
-bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+bxp_ENMO <- create.boxplot(data_long = df_long.ENMO, metric = "ENMO", per = "behavior", order_categories = c("PA", "SB", "sleep"))
 bxp_ENMO
-bxp_MAD <- create.boxplot(data_long = df_long.MAD, metric = "MAD", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
+bxp_MAD <- create.boxplot(data_long = df_long.MAD, metric = "MAD", per = "behavior", order_categories = c("PA", "SB", "sleep"))
 bxp_MAD
 
 combine.save.plots(bxp_ENMO, bxp_MAD, format = "boxplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "boxplot_behaviors.png")
@@ -375,4 +494,151 @@ plot(density_MAD.hip)
 density_MAD.wrist <- create.densityplot(data = data.app.axivity, metric = "MAD", placement = "wrist", per = "behavior", order_categories = c("PA", "SB", "sleep", "NA"))
 plot(density_MAD.wrist)
 combine.save.plots(density_MAD.hip, density_MAD.wrist, format = "densityplots", savedir = paste0(savedir, "/plots/distributions/behaviors/"), filename = "density_MAD_behaviors.png")
+```
+
+### Differences in acceleration 
+
+## Hip placement
+
+# ENMO
+
+```{r Mixed model to asses differences in categories ENMO hip, echo = FALSE}
+long_ENMOhip$castorID <- as.factor(long_ENMOhip$castorID)
+
+acc_act <- glm(value ~ activity, data = long_ENMOhip)
+acc_act_id <- lme4::glmer.nb(value ~ activity  + (1 | castorID), data = long_ENMOhip)
+
+#acc_act_id <- lme4::glmer(value ~ activity  + (1 | castorID), data = long_ENMOhip) # Mixed models are robust when distribution assumption is violated, model estimates might be biased though https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13434
+anova(acc_act, acc_act_id, test="Chisq")
+rm(acc_act)
+summary(acc_act_id)
+
+maineffect_activity <- emmeans::emeans(acc_act_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_ENMOhip, pbkrtest.limit = 3307)
+maineffect_activity
+emmeans::contrast(maineffect_activity, "pairwise", pbkrtest.limit = 3307)
+
+# Other option is Zero-inflated poisson distribution
+zipoisson <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity,
+                      data=long_ENMOhip,
+                      ziformula=~1,
+                      family=poisson)
+zipoisson_id <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity  + (1 | castorID),
+                      data=long_ENMOhip,
+                      ziformula=~1,
+                      family=poisson)
+anova(zipoisson, zipoisson_id, test="Chisq")
+rm(zipoisson)
+summary(zipoisson_id)
+
+maineffect_activity_pois <- emmeans::emmeans(zipoisson_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_ENMOhip, pbkrtest.limit = 3307)
+maineffect_activity_pois
+emmeans::contrast(maineffect_activity_pois, "pairwise", pbkrtest.limit = 3307)
+```
+
+# MAD
+
+```{r Mixed model to asses differences in categories MAD hip, echo = FALSE}
+long_MADhip$castorID <- as.factor(long_MADhip$castorID)
+acc_act <- glm(value ~ activity, data = long_MADhip)
+acc_act_id <- lme4::glmer.nb(value ~ activity  + (1 | castorID), data = long_MADhip)
+
+#acc_act_id <- lme4::glmer(value ~ activity  + (1 | castorID), data = long_MADhip) # Mixed models are robust when distribution assumption is violated, model estimates might be biased though https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13434
+anova(acc_act, acc_act_id, test="Chisq")
+rm(acc_act)
+summary(acc_act_id)
+
+maineffect_activity <- emmeans::emmeans(acc_act_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_MADhip, pbkrtest.limit = 3307)
+maineffect_activity
+emmeans::contrast(maineffect_activity, "pairwise", pbkrtest.limit = 3307)
+
+# Other option is Zero-inflated poisson distribution
+zipoisson <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity,
+                      data=long_MADhip,
+                      ziformula=~1,
+                      family=poisson)
+zipoisson_id <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity  + (1 | castorID),
+                      data=long_MADhip,
+                      ziformula=~1,
+                      family=poisson)
+anova(zipoisson, zipoisson_id, test="Chisq")
+rm(zipoisson)
+summary(zipoisson_id)
+
+maineffect_activity_pois <- emmeans::emmeans(zipoisson_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_MADhip, pbkrtest.limit = 3307)
+maineffect_activity_pois
+emmeans::contrast(maineffect_activity_pois, "pairwise", pbkrtest.limit = 3307)
+```
+
+## Wrist placement 
+
+# ENMO
+
+```{r Mixed model to asses differences in categories ENMO wrist, echo = FALSE}
+long_ENMOwrist$castorID <- as.factor(long_ENMOwrist$castorID)
+acc_act <- glm(value ~ activity, data = long_ENMOwrist)
+acc_act_id <- lme4::glmer(value ~ activity  + (1 | castorID), data = long_ENMOwrist) # Mixed models are robust when distribution assumption is violated, model estimates might be biased though https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13434
+anova(acc_act, acc_act_id, test="Chisq")
+rm(acc_act)
+summary(acc_act_id)
+
+maineffect_activity <- emmeans::emmeans(acc_act_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_ENMOwrist, pbkrtest.limit = 3307)
+maineffect_activity
+emmeans::contrast(maineffect_activity, "pairwise", pbkrtest.limit = 3307)
+
+# Other option is Zero-inflated poisson distribution
+zipoisson <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity,
+                      data=long_ENMOwrist,
+                      ziformula=~1,
+                      family=poisson)
+zipoisson_id <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity  + (1 | castorID),
+                      data=long_ENMOwrist,
+                      ziformula=~1,
+                      family=poisson)
+anova(zipoisson, zipoisson_id, test="Chisq")
+rm(zipoisson)
+summary(zipoisson_id)
+
+maineffect_activity_pois <- emmeans::emmeans(zipoisson_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_ENMOwrist, pbkrtest.limit = 3307)
+maineffect_activity_pois
+emmeans::contrast(maineffect_activity_pois, "pairwise", pbkrtest.limit = 3307)
+```
+
+# MAD
+
+```{r Mixed model to asses differences in categories MAD hip, echo = FALSE}
+long_MADhip$castorID <- as.factor(long_MADhip$castorID)
+acc_act <- glm(value ~ activity, data = long_MADhip)
+acc_act_id <- lme4::glmer(value ~ activity  + (1 | castorID), data = long_MADhip) # Mixed models are robust when distribution assumption is violated, model estimates might be biased though https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13434
+anova(acc_act, acc_act_id, test="Chisq")
+rm(acc_act)
+summary(acc_act_id)
+
+maineffect_activity <- emmeans::emmeans(acc_act_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_MADhip, pbkrtest.limit = 3307)
+maineffect_activity
+emmeans::contrast(maineffect_activity, "pairwise", pbkrtest.limit = 3307)
+
+# Other option is Zero-inflated poisson distribution
+zipoisson <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity,
+                      data=long_MADhip,
+                      ziformula=~1,
+                      family=poisson)
+zipoisson_id <- glmmTMB::glmmTMB(as.integer(value+0.5) ~ activity  + (1 | castorID),
+                      data=long_MADhip,
+                      ziformula=~1,
+                      family=poisson)
+anova(zipoisson, zipoisson_id, test="Chisq")
+rm(zipoisson)
+summary(zipoisson_id)
+
+maineffect_activity_pois <- emmeans::emmeans(zipoisson_id, comparison="pairwise", 
+                                         specs= ~ activity, adjust="sidak", data = long_MADhip, pbkrtest.limit = 3307)
+maineffect_activity_pois
+emmeans::contrast(maineffect_activity_pois, "pairwise", pbkrtest.limit = 3307)
 ```

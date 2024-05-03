@@ -48,8 +48,8 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
         
       }
       categories <- unique(app_day$activity)
-      #palette <- viridis::viridis(length(categories), option = "D")
-      palette <- RColorBrewer::brewer.pal(n = length(categories), name = "Dark2")
+      palette <- viridis::viridis(length(categories), option = "D")
+      #palette <- RColorBrewer::brewer.pal(n = length(categories), name = "Dark2")
       
       
       for(entry in 1:nrow(app_day)){ # Select axivity data for the timeslots an activity is filled in
@@ -82,7 +82,7 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
             df_wrist$xmax <- as.POSIXct(xmax, origin = "1970-01-01")
             df_wrist$col <- col
             
-            figure_labels = c("personal care", "active play", "sitting/lying", "sleeping", "eating/drinking", "quiet play", "passive transport")
+            figure_labels = c("personal care", "Active play", "Sitting/lying", "Sleeping", "Eating/drinking", "Calm play", "Passive transport")
             g_wrist <- ggplot2::ggplot() + 
               ggplot2::geom_line(data = data.wrist_day, ggplot2::aes(data.wrist_day$timestamp, data.wrist_day$ENMO, group = data.wrist_day$activity)) + 
               ggplot2::geom_rect(data = df_wrist, mapping=ggplot2::aes(xmin = anytime::anytime(xmin), xmax = anytime::anytime(xmax), ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 

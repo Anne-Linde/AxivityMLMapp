@@ -19,10 +19,8 @@
 combine.save.plots <- function(plot1, plot2, format, savedir, filename){
   
   if(format == "boxplots" | format == "overlay"){
-    
-    
     gridExtra::grid.arrange(plot1, plot2, nrow = 2, heights = c(1.2, 1)) #arranges plots within grid
-    if(format = "overlay"){
+    if(format == "overlay"){
       plot1_build <- ggplot2::ggplot_build(plot1)
       plot2_build <- ggplot2::ggplot_build(plot2)
       ylim <- max(round(plot1_build$layout$panel_scales_y[[1]]$range$range[2], 1), round(plot2_build$layout$panel_scales_y[[1]]$range$range[2], 1))
