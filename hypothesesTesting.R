@@ -1,4 +1,4 @@
-### This script examines the differences between acceleration values of the app categories by:
+### This script evaluates the construct validity by hypotheses testing (as described in section 2.4.3.2 of article):
 ## 1) Plotting the acceleration distributions for the My Little Moves app categories
 ## 2) Fitting general linear mixed models with separate random intercepts for activity over participants
 ## 3) Fitting general linear mixed models with separate random intercepts for behavior over participants
@@ -225,7 +225,7 @@ acc_act_act_id.loghipMAD <- lme4::lmer(logMAD.hip ~ forcats::fct_relevel(activit
 report::report_table(acc_act_act_id.loghipMAD)
 jtools::summ(acc_act_act_id.loghipMAD)
 
-### Wrist placement  #####Hier gebleven
+### Wrist placement
 ## ENMO
 # Un-transformed data
 acc_act.wristENMO <- glm(ENMO.wrist/1000 ~ forcats::fct_relevel(activity, ref = "sleeping"), data = data.pp)
@@ -473,7 +473,6 @@ coef(summary(acc_beh_id_beh.logwristMAD))
 
 # Use following lines to relevel the models for the different contrasts
 acc_beh_id_beh.logwristMAD <- lme4::lmer(logMAD.wrist/1000 ~ forcats::fct_relevel(behavior, ref = "SB")  + (1 | castorID/behavior), data = data.pp, REML = TRUE)
-
 
 #### STEP 4: Test for differences in acceleration between movement behaviors when labeling of behavior changes
 # Remove passive transport

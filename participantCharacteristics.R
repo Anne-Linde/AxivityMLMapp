@@ -190,14 +190,3 @@ prop.table(table(as.factor(demo.rel.acc.app$gender_child))) * 100 #45.8. girl
 mean(demo.rel.acc.app$zbmi, na.rm = T)
 sd(demo.rel.acc.app$zbmi, na.rm = T)
 
-
-# 
-# ##### Flowchart
-# file.app.activities <- "20230918_MLMapp_activiteit_gedrag_duur_per_dag.csv"
-# 
-# 
-# load(paste0(path.app, file.app.activities))
-# 
-# 
-
-

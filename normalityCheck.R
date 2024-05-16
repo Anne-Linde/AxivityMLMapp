@@ -1,4 +1,4 @@
-### This script 
+### This script (as described in section 2.4.2 of the article)
 ## 1) Creates normality and Q-Q plots for a) the My Little Moves app: the total duration (separate for activities and 24-h movement behaviors);
 ## and b) the accelerometer hip and wrist data (separate plots for each participant)
 ## 2) Transforms accelererometer data (log + small jitter)

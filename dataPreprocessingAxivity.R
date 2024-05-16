@@ -1,4 +1,4 @@
-# This script was used for processing the Axivity .cwa files (as described in section 2.8.1.2 of the article)
+# This script was used for processing the Axivity .cwa files (as described in section 2.4.1.2 of the article)
 
 ## 1) Load raw data and convert into 5-sec epoch data;
 ## 2) Remove periods of non-wear;
