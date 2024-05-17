@@ -10,12 +10,14 @@ filename.app <- "20230918_activities_castor_linked_duration.csv"
 filename.app.day <- "/20230918_MLMapp_pp_duration_frequency_day.csv"
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output"
 
-filepath.axivity <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/5sec/epochdata/"
+filepath.axivity <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/"
 filepath.hip <- paste0(filepath.axivity, "hip/nonwear_removed")
 filepath.wrist <- paste0(filepath.axivity, "wrist/nonwear_removed")
 
 # source functions directly from file, to be replaced by package installation:
-my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+#install.packages("ReliabilityValidityStudyAxivityMLMapp")
+#library(ReliabilityValidityStudyAxivityMLMapp)
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 ## Load data
@@ -112,17 +114,6 @@ ggplot2::ggsave(file=paste0(savedir, "/plots/normality/histograms/Accelerometer 
 q <- ggplot2::ggplot(data = data.pp, mapping = ggplot2::aes(sample = logENMO.hip)) + ggplot2::geom_qq() +
   ggplot2::theme_classic() + ggplot2::stat_qq() + ggplot2::stat_qq_line()
 ggplot2::ggsave(file=paste0(savedir, "/plots/normality/qq-plot/Accelerometer data/ENMO/hip/log_transformed_acc.jpeg"), q, width = 5, height = 5, dpi = 200) #saves g
-
-# #square root transformation
-# data.pp$sqrtENMO.hip <- sqrt(data.pp$ENMO.hip)
-# h <- ggplot2::ggplot(data = data.pp, mapping = ggplot2::aes(x = sqrtENMO.hip)) + ggplot2::geom_histogram() +
-#   ggplot2::theme_classic() + ggplot2::labs(title = "All participants' sqrt(x) transformed accelerations for all categories", 
-#                                            x = expression(paste("ENMO (m", italic("g"), ")")), y = "Frequency")
-# ggplot2::ggsave(file=paste0(savedir, "/plots/normality/histograms/Accelerometer data/ENMO/hip/srt_transformed_acc.jpeg"), h, width = 5, height = 5, dpi = 200) #saves g
-# 
-# q <- ggplot2::ggplot(data = data.pp, mapping = ggplot2::aes(sample = sqrtENMO.hip)) + ggplot2::geom_qq() +
-#   ggplot2::theme_classic() + ggplot2::stat_qq() + ggplot2::stat_qq_line()
-# ggplot2::ggsave(file=paste0(savedir, "/plots/normality/qq-plot/Accelerometer data/ENMO/hip/srt_transformed_acc.jpeg"), q, width = 5, height = 5, dpi = 200) #saves g
 
 # MAD
 h <- ggplot2::ggplot(data = data.pp, mapping = ggplot2::aes(x = MAD.hip)) + ggplot2::geom_histogram() +
@@ -221,12 +212,12 @@ for (file in 1:length(filelist)){
   q <- ggplot2::ggplot(data = epochdata$agg.epoch, mapping = ggplot2::aes(sample = ENMO)) + ggplot2::geom_qq() +
     ggplot2::theme_classic() + ggplot2::stat_qq() + ggplot2::stat_qq_line()
   ggplot2::ggsave(file=paste0(savedir, "/plots/normality/qq-plot/Accelerometer data/ENMO/hip/", filelist[file], ".jpeg"), q, width = 5, height = 5, dpi = 200) #saves g
-                  
+  
   i <- ggplot2::ggplot(data = epochdata$agg.epoch, mapping = ggplot2::aes(x = MAD)) + ggplot2::geom_histogram() +
     ggplot2::theme_classic() + ggplot2::labs(title = filelist[file], 
                                              x = expression(paste("MAD (m", italic("g"), ")")), y = "Frequency")
   ggplot2::ggsave(file=paste0(savedir, "/plots/normality/histograms/Accelerometer data/MAD/hip/", filelist[file], ".jpeg"), i, width = 5, height = 5, dpi = 200) #saves g
-                  
+  
   q <- ggplot2::ggplot(data = epochdata$agg.epoch, mapping = ggplot2::aes(sample = MAD)) + ggplot2::geom_qq() +
     ggplot2::theme_classic() + ggplot2::stat_qq() + ggplot2::stat_qq_line()
   ggplot2::ggsave(file=paste0(savedir, "/plots/normality/qq-plot/Accelerometer data/MAD/hip/", filelist[file], ".jpeg"), q, width = 5, height = 5, dpi = 200) #saves g
@@ -255,4 +246,3 @@ for (file in 1:length(filelist)){
     ggplot2::theme_classic() + ggplot2::stat_qq() + ggplot2::stat_qq_line()
   ggplot2::ggsave(file=paste0(savedir, "/plots/normality/qq-plot/Accelerometer data/MAD/wrist/", filelist[file], ".jpeg"), q, width = 5, height = 5, dpi = 200) #saves g
 }
-

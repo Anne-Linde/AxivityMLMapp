@@ -1,18 +1,40 @@
 ## 3) Calculate time spent in activity categories and label the movement behavior. 
 #     Then calculate time spent and frequency in all activity categories per day for all participants
+#' categorize.structure.activities
+#'
+#' @description 'categorize.structure.activities' loads activity data from the MLM app (as structured by 'link.app.castor'), categorizes the activities, calculates the duration and frequency of each activity, and saves the processed data.
+#'
+#' @param datadir A string representing the directory where the activity data files are located.
+#' @param date A string representing the date to be used in the filename for loading and saving data.
+#'
+#' @details
+#' The function performs the following steps:
+#' 1. Loads activity data from a CSV file.
+#' 2. Calculates the total duration of each activity.
+#' 3. Categorizes activities into 24-hour movement behaviors (e.g., SB for sedentary behavior, PA for physical activity, and sleep)
+#' 4. Saves the categorized data with durations into a new CSV file.
+#' 5. Converts the long format activity data into a wide format, summarizing daily activity duration and frequency.
+#' 6. Adds day of the week and weekend information.
+#' 7. Saves the structured data into another CSV file.
+#'
+#' @return The function does not return a value but saves two CSV files with the processed data.
+#'
+#' @importFrom dplyr relocate
+#' @importFrom utils write.csv
+#' @export
 
 categorize.structure.activities <- function(datadir, date){
   
   # Load in app data
   data <- read.csv(paste0(datadir, "/", date, "_activities_castor_linked.csv"))[,-1]
-
+  
   # Calculate time spent in activity categories
   data$total_duration <- as.integer(as.POSIXct(data$endTime, format ="%H:%M:%S") - as.POSIXct(data$startTime, format ="%H:%M:%S"))
   
   # Label 24-hour movement behavior and add posture
   data$behavior <- rep(NA, nrow(data))
   data$posture <- rep(NA, nrow(data))
-
+  
   for(row in 1:nrow(data)){ # For each entry
     if(data$activity[row] == "personalcare" | data$activity[row] == "eatingdrinking" | data$activity[row] == "passivetransport"){
       data$behavior[row] <- "SB"
@@ -102,14 +124,6 @@ categorize.structure.activities <- function(datadir, date){
                                paste0("time_", unique(data$activity)),
                                paste0("freq_", unique(data$activity)),
                                "PA", "SB", "sleep")
-  # data_category <- data.frame(matrix(NA, nrow = length(unique(data$castorID))*7, 
-  #                                    ncol = 4 + 4*length(unique(data$activity)) + 3))
-  # colnames(data_category) <- c("castorID", "cohort", "date", "measurement",
-  #                              paste0("time_", unique(data$activity)),
-  #                              paste0("freq_", unique(data$activity)),
-  #                              paste0("time_posture_", unique(data$posture)),
-  #                              paste0("freq_posture_", unique(data$posture)),
-  #                              "PA", "SB", "sleep")
   
   # Structure data per day
   counter = 1
@@ -135,16 +149,6 @@ categorize.structure.activities <- function(datadir, date){
             column_index_frequency <- which(colnames(data_category) == paste0("freq_", unique(data_day$activity)[category]))
             data_category[counter, column_index_frequency] <- activity_frequency_day #Save frequency of category entries
           }
-          # for(posture in 1:length(unique(data_day$posture))){ # For each posture entered
-          #   if(!is.na(data_day$posture[posture])){
-          #     posture_sum_day <- sum(data_day[data_day$posture == unique(data_day$posture)[posture], ]$total_duration, na.rm = TRUE) # Calculate total activity duration
-          #     column_index_duration <- which(colnames(data_category) == paste0("time_posture_", unique(data_day$posture)[posture]))
-          #     data_category[counter, column_index_duration] <- posture_sum_day #Save total duration entered for that category
-          #     posture_frequency_day <- sum(data_day$posture == unique(data_day$posture)[posture], na.rm = TRUE) # Calculate activity frequency
-          #     column_index_frequency <- which(colnames(data_category) == paste0("freq_posture_", unique(data_day$posture)[posture]))
-          #     data_category[counter, column_index_frequency] <- posture_frequency_day #Save frequency of category entries 
-          #   }
-          # }
           for(b in 1:length(unique(data_day$behavior))){ #For each behavior related to the categories entered
             if(!is.na(unique(data_day$behavior)[b])){
               activity_sum_day <- sum(data_day[data_day$behavior == unique(data_day$behavior)[b], ]$total_duration, na.rm = TRUE) #Calculate total behavior duration
@@ -167,7 +171,6 @@ categorize.structure.activities <- function(datadir, date){
       data_category$weekendday[day] <- 1
     } else {data_category$weekendday[day] <- 0}
   }
-  library(dplyr)
   data_category <- data_category %>% relocate(c(day, weekendday), .before = time_passivescreen)
   
   # Save as.csv

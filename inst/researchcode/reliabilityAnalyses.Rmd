@@ -25,8 +25,9 @@ epochdir.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/reliability/"
 
 # source functions directly from file, to be replaced by package installation:
-my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R
-"
+#install.packages("ReliabilityValidityStudyAxivityMLMapp")
+#library(ReliabilityValidityStudyAxivityMLMapp)
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 # Load in Castor data (this file includes participant characteristics)
@@ -41,8 +42,6 @@ library(compositions)
 ```
 
 ### Determine criteria for generation of reliable estimates
-
-In this script, [description here]
 
 ## My Little Moves app 
 
@@ -517,27 +516,3 @@ ICC.wrist.MAD <- cbind(ICC.wrist.MAD, sb.wrist.MAD)
 colnames(ICC.wrist.MAD) <- c("ICC", "LB", "UB", "SB70")
 write.csv(ICC.wrist.MAD, file = paste0(savedir, "Axivity/wrist/ICC_Spearman_MAD.csv"))
 ```
-
-
-# ```{r Heatmaps for required number of days MLM app}
-# outcomes <- c("PA", "SB", "sleep", "ilr1", "ilr2")
-# for(outcome in 1:outcomes){
-#   if(outcomes[outcome] == "PA"){ temp <- ICC.PA
-#   } else if(outcomes[outcome] == "SB"){ temp <- ICC.SB
-#   } else if(outcomes[outcome] == "sleep"){ temp <- ICC.sleep
-#   } else if(outcomes[outcome] == "ilr1"){ temp <- ICC.ilr1
-#   } else { temp <- ICC.ilr2
-#   }
-#   heatmap_colors <- cut(temp$ICC, breaks = c(0, 0.70, 1), labels = c("red", "green"))
-#   heatmap <- ggplot2::ggplot(temp, ggplot2::aes(x = hour, y = day, fill = ICC)) +
-#   ggplot2::geom_tile(color = "white") +
-#   #ggplot2::scale_fill_manual(values = c(red = "red", green = "green")) +
-#   ggplot2::geom_text(ggplot2::aes(label = round(rel*100, 1)), color = "black", size = 2) +
-#   ggplot2::labs(x = "Number of hours", y = "Number of days") +
-#   ggplot2::theme_minimal() +
-#   ggplot2::scale_x_continuous(breaks = round(unique(temp$hour))) +  
-#   ggplot2::scale_y_continuous(breaks = round(unique(temp$day))) 
-# print(heatmap)
-# ggplot2::ggsave(filename = paste0(savedir, "MLMapp/reliability_", unique(temp.icc$outcome)[outcomes], ".jpeg"), plot = heatmap, width = 10, height = 8, units = "in", dpi = 300)
-# }
-# ```

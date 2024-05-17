@@ -7,7 +7,9 @@ rm(list=ls())
 gc()
 
 # source functions directly from file, to be replaced by package installation:
-my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+#install.packages("ReliabilityValidityStudyAxivityMLMapp")
+#library(ReliabilityValidityStudyAxivityMLMapp)
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 ## User input  

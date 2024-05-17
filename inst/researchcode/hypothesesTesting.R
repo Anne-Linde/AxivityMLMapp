@@ -22,10 +22,10 @@ load(datadir)
 # data.pp$MAD.hip<- data.pp$MAD.hip*1000
 # data.pp$MAD.wrist<- data.pp$MAD.wrist*1000
 
-#save(data.pp, file = paste0("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/app_ax_entry_", date, ".RData"))
-
 # source functions directly from file, to be replaced by package installation:
-my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
+#install.packages("ReliabilityValidityStudyAxivityMLMapp")
+#library(ReliabilityValidityStudyAxivityMLMapp)
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 #### STEP 1: Plot the acceleration distributions in the different app categories
@@ -43,8 +43,8 @@ level_order <- c("sleeping", "sittinglying", "personalcare", "eatingdrinking", "
 #                  "activescreen", "passivetransport", "activetransport", "quietplay", 
 #                  "activeplay", "dontknowplay", "someoneelse", "otheractivity", "dontknow")
 level_labels <- c("Sleeping", "Sitting/lying", "Personal care", "Eating/drinking", "Passive screen use", 
-                 "Active screen use", "Passive transport", "Active transport", "Calm play", 
-                 "Active play", "Play of unknown intensity")
+                  "Active screen use", "Passive transport", "Active transport", "Calm play", 
+                  "Active play", "Play of unknown intensity")
 
 # Nice to have: number of entries per category
 # n_fun <- function(x){
@@ -72,8 +72,8 @@ gridExtra::grid.arrange(bxp_ENMO_activities, bxp_MAD_activities, nrow=2) #arrang
 
 boxplots_activities <- gridExtra::arrangeGrob(bxp_ENMO_activities + ggplot2::theme(legend.position="top"),
                                               bxp_MAD_activities + ggplot2::theme(legend.position="none"),
-                                   nrow=2, 
-                                   heights = c(4.5, 3)) # generates plot
+                                              nrow=2, 
+                                              heights = c(4.5, 3)) # generates plot
 plot(boxplots_activities) #print the plot
 ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/categories/boxplot_categories.png"), boxplots_activities, width = 10, height = 8, dpi = 600) #saves g
 
@@ -98,8 +98,8 @@ gridExtra::grid.arrange(bxp_ENMO_behaviors, bxp_MAD_behaviors, nrow=2) #arranges
 
 boxplots_behaviors <- gridExtra::arrangeGrob(bxp_ENMO_behaviors + ggplot2::theme(legend.position="top"),
                                              bxp_MAD_behaviors + ggplot2::theme(legend.position="none"),
-                                              nrow=2, 
-                                              heights = c(4.5, 3)) # generates plot
+                                             nrow=2, 
+                                             heights = c(4.5, 3)) # generates plot
 ggplot2::ggsave(file=paste0(savedir, "/plots/distributions/behaviors/boxplot_behaviors.png"), boxplots_behaviors, width = 10, height = 8, dpi = 600) #saves g
 
 ### Combine plots
@@ -113,7 +113,7 @@ bxp_MAD_act <- ggplot2::ggplot(df_long.MAD, ggplot2::aes(y = value, x = as.facto
 
 boxplots_act <- gridExtra::arrangeGrob(bxp_ENMO_activities + ggplot2::theme(legend.position="none"),
                                        bxp_MAD_act + ggplot2::theme(legend.position="none"),
-                                              ncol=2) # generates plot
+                                       ncol=2) # generates plot
 
 xlabel <- grid::textGrob("App activities", gp = grid::gpar(fontsize = 12))
 
@@ -961,49 +961,3 @@ anova(logwristMAD.model10.id, logwristMAD.model10.id.beh, test="Chisq")
 rm(logwristMAD.model10.id)
 
 jtools::summ(logwristMAD.model10.id.beh)
-
-
-#Correlations between categories
-data.pp.cor <- data.pp[!is.na(data.pp$behavior),]
-
-## HIP
-#ENMO
-
-
-data.pp.cor.enmohip <- data.pp.cor[!is.na(data.pp.cor$logENMO.hip),]
-
-data.pp.cor.enmohip_pasb <- data.pp.cor.enmohip[-which(data.pp.cor.enmohip$behavior == "sleep"),]
-Rpa <-ifelse(data.pp.cor.enmohip_pasb$behavior=="PA",1,0)
-Rsb <-ifelse(data.pp.cor.enmohip$behavior=="SB",1,0)
-Rsleep <-ifelse(data.pp.cor.enmohip$behavior=="sleep",1,0)
-ltm::biserial.cor(data.pp.cor.enmohip_pasb$logENMO.hip, Rpa)
-ltm::biserial.cor(data.pp.cor.enmohip$logENMO.hip, Rsb)
-ltm::biserial.cor(data.pp.cor.enmohip$logENMO.hip, Rsleep)
-
-#MAD
-data.pp.cor.madhip <- data.pp.cor[!is.na(data.pp.cor$logMAD.hip),]
-Rpa <-ifelse(data.pp.cor.madhip$behavior=="PA",1,0)
-Rsb <-ifelse(data.pp.cor.madhip$behavior=="SB",1,0)
-Rsleep <-ifelse(data.pp.cor.madhip$behavior=="sleep",1,0)
-ltm::biserial.cor(data.pp.cor.madhip$logMAD.hip, Rpa)
-ltm::biserial.cor(data.pp.cor.madhip$logMAD.hip, Rsb)
-ltm::biserial.cor(data.pp.cor.madhip$logMAD.hip, Rsleep)
-
-## WRIST
-#ENMO
-data.pp.cor.enmowrist <- data.pp.cor[!is.na(data.pp.cor$logENMO.wrist),]
-Rpa <-ifelse(data.pp.cor.enmowrist$behavior=="PA",1,0)
-Rsb <-ifelse(data.pp.cor.enmowrist$behavior=="SB",1,0)
-Rsleep <-ifelse(data.pp.cor.enmowrist$behavior=="sleep",1,0)
-ltm::biserial.cor(data.pp.cor.enmowrist$logENMO.wrist, Rpa)
-ltm::biserial.cor(data.pp.cor.enmowrist$logENMO.wrist, Rsb)
-ltm::biserial.cor(data.pp.cor.enmowrist$logENMO.wrist, Rsleep)
-
-#MAD
-data.pp.cor.madwrist <- data.pp.cor[!is.na(data.pp.cor$logMAD.wrist),]
-Rpa <-ifelse(data.pp.cor.madwrist$behavior=="PA",1,0)
-Rsb <-ifelse(data.pp.cor.madwrist$behavior=="SB",1,0)
-Rsleep <-ifelse(data.pp.cor.madwrist$behavior=="sleep",1,0)
-ltm::biserial.cor(data.pp.cor.madwrist$logMAD.wrist, Rpa)
-ltm::biserial.cor(data.pp.cor.madwrist$logMAD.wrist, Rsb)
-ltm::biserial.cor(data.pp.cor.madwrist$logMAD.wrist, Rsleep)

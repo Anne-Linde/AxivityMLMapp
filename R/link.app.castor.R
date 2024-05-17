@@ -1,5 +1,15 @@
-# This funtcion uses the research codes to link the Castor ID to the MLM app
-
+#' link.app.castor
+#'
+#' @description 'link.app.castor' links Castor IDs and cohort numbers to motor milestones and activities data collected from the MLM app. The linked data is then saved as CSV files.
+#'
+#' @param datadir.app A character string specifying the directory where the MLM app data files are located.
+#' @param datadir.castor A character string specifying the directory where the Castor data file is located.
+#' @param filename.castor A character string specifying the name of the Castor data file.
+#' @param date A character string specifying the date used for naming the input and output CSV files.
+#'
+#' @return This function does not return a value. It saves two CSV files with the linked data in the specified directory.
+#'
+#' @export
 
 link.app.castor <- function(datadir.app, datadir.castor, filename.castor, date) {
   
