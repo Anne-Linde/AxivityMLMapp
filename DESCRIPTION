@@ -4,8 +4,9 @@ Title: ReliabilityValidityStudyMLMappAxivity
 Version: 0.1-0
 Date: 2024-05-17
 Authors@R: c(person("Annelinde","Lettink",role=c("aut","cre"),
-                    email="annelinde.lettink@gmail.com"))
-Maintainer: Annelinde Lettink <annelinde.lettink@gmail.com>
+                    email="a.lettink@amsterdamumc.nl"), person("Jelle","Arts",role=c("aut"),
+                    email="j.arts@amsterdamumc.nl"))
+Maintainer: Annelinde Lettink <a.lettink@amsterdamumc.nl>
 Description: For processing accelerometer (Axivity) and My Little Moves app data to evaluate reliability and construct validity.
 URL: https://github.com/Anne-Linde/AxivityMLMapp
 License: Apache License version 2.0 | file LICENSE
