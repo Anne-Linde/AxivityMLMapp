@@ -1,15 +1,32 @@
-# Required libraries
-#install.packages("rjson", "haven")
-library("rjson", "haven") # for reading in json files,. for saving data.frame as .sav
+#' unnest.json
+#'
+#' @description 'unnest.json' reads .json files from a specified directory, processes the data, and saves the results as CSV files. The .json files required are information about participants, intake questions, registered activities, and questionnaires.
+#'
+#' @param datadir A character string specifying the directory where the .json files are located.
+#' @param date A character string specifying the date to be used in the output filenames.
+#' @details
+#' The function performs the following steps:
+#' 1. Loads JSON data files: participants.json, measurementperiods.json, measuringmoments.json, and questionnaires.json.
+#' 2. Converts the JSON files to data frames, processing and unnesting the nested JSON structure.
+#' 3. Links research codes with participant data.
+#' 4. Saves the processed data as CSV files in the specified directory.
+#'
+#' @return
+#' The function does not return any values. It saves two CSV files: one for motor milestones and one for activities.
+#'
+#' @importFrom rjson fromJSON
+#' @importFrom utils write.csv
+#' @importFrom dplyr recode
+#' @export
 
 unnest.json <- function(datadir, date){
   ### STEP 1: Load .json data files ###
   # This file includes the research codes (accessCode) and the corresponding participant ids (_id)
-  participants <- rjson::fromJSON(file = paste(datadir, "participants.json", sep = "/")) #same information in participants.json
+  participants <- fromJSON(file = paste(datadir, "participants.json", sep = "/")) #same information in participants.json
   # This file includes the answers to the intake questions for each participant (participantId)
-  intake <- rjson::fromJSON(file = paste(datadir, "measurementperiods.json", sep = "/"))
+  intake <- fromJSON(file = paste(datadir, "measurementperiods.json", sep = "/"))
   # This file includes all registered activities of all participants (measurementPeriod)
-  result <- rjson::fromJSON(file = paste(datadir, "measuringmoments.json", sep = "/"))
+  result <- fromJSON(file = paste(datadir, "measuringmoments.json", sep = "/"))
   # This file includes the questions and the corresponding answer labels: 
   ## [[1]] = intake, including the intake questions ($questions) with answer labels ($answers)
   ## Then app categories, including follow-up questions ($questions), and their corresponding answer labels ($answers)
@@ -18,7 +35,7 @@ unnest.json <- function(datadir, date){
   ## [[6]]$category$_type = passiefverplaatsen, [[7]]$category$_type = actiefverplaatsen, 
   ## [[8]]$category$_type = beeldscherm, [[9]]$category$_type = slapen, 
   ## [[10]]$category$_type = other, [[11]]$category$_type = weetniet, 
-  question_labels <- rjson::fromJSON(file = paste(datadir, "questionnaires.json", sep = "/"))
+  question_labels <- fromJSON(file = paste(datadir, "questionnaires.json", sep = "/"))
   
   ### STEP 2: Convert JSON files to unnested data list
   ## Participant file
@@ -60,7 +77,7 @@ unnest.json <- function(datadir, date){
         if (intake[[json_element]]$intakeLabels[[question]]$answerNumber == 2){
           intake_untangled[json_element, 6] <- NA # If child is not able to do this, the follow-up question (age) will not be asked
         }
-       # Age to reach motor milestone
+        # Age to reach motor milestone
       } else if (intake[[json_element]]$intakeLabels[[question]]$questionNumber == 11){
         intake_untangled[json_element, 6] <- intake[[json_element]]$intakeLabels[[question]]$answerNumber 
       }
@@ -70,7 +87,7 @@ unnest.json <- function(datadir, date){
         if (intake[[json_element]]$intakeLabels[[question]]$answerNumber == 2){
           intake_untangled[json_element, 8] <- NA # If child is not able to do this, the follow-up question (age) will not be asked
         } 
-       # Age to reach motor milestone
+        # Age to reach motor milestone
       } else if (intake[[json_element]]$intakeLabels[[question]]$questionNumber == 21){
         intake_untangled[json_element, 8] <- intake[[json_element]]$intakeLabels[[question]]$answerNumber 
       }
@@ -211,10 +228,10 @@ unnest.json <- function(datadir, date){
   
   results_untangled <- results_untangled[-which(is.na(results_untangled$pp)), ]
   results_untangled$activity <- as.factor(results_untangled$activity)
-  results_untangled$activity <- dplyr::recode(results_untangled$activity, weetniet = "dontknow", iemandanders = "someoneelse",
-                                              zittenliggen = "sittinglying", beeldscherm = "screen", verzorging = "personalcare",
-                                              spelen = "playing", slapen = "sleeping", other = "otheractivity", etendrinken = "eatingdrinking",
-                                              actiefverplaatsen = "activetransport", passiefverplaatsen = "passivetransport", .default = NA_character_)
+  results_untangled$activity <- recode(results_untangled$activity, weetniet = "dontknow", iemandanders = "someoneelse",
+                                       zittenliggen = "sittinglying", beeldscherm = "screen", verzorging = "personalcare",
+                                       spelen = "playing", slapen = "sleeping", other = "otheractivity", etendrinken = "eatingdrinking",
+                                       actiefverplaatsen = "activetransport", passiefverplaatsen = "passivetransport", .default = NA_character_)
   
   
   ### STEP 3: Link the research codes
@@ -263,4 +280,3 @@ unnest.json <- function(datadir, date){
   write.csv(motormilestones, paste0(datadir, "/", date, "_motormilestones.csv"))
   write.csv(activities, paste0(datadir, "/", date, "_activities.csv"))
 }
-
