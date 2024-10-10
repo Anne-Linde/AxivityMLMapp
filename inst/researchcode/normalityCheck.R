@@ -87,6 +87,56 @@ q <- ggplot2::ggplot(data = data.app, mapping = ggplot2::aes(sample = total_dura
   ggplot2::theme_classic() + ggplot2::stat_qq() + ggplot2::stat_qq_line()
 ggplot2::ggsave(file=paste0(savedir, "/plots/normality/qq-plot/App data/qq_total_duration_behavior_separate.jpeg"), q, width = 5, height = 5, dpi = 200) #saves g
 
+### Calculate percentage that parents registered that my child was with someone else, other activity, or I don't know per day + average/median sd IQR per day
+library(dplyr)
+
+# Step 1: Filter data for the activity "iemand anders"
+data_filtered <- data.app.3 %>%
+  filter(activity == "iemandanders")
+
+# Step 2: Calculate total duration spent with "iemand anders" per day
+duration_iemandanders <- data_filtered %>%
+  group_by(castorID, date) %>%
+  summarise(total_duration_iemandanders = sum(total_duration, na.rm = TRUE)) %>%
+  ungroup()
+
+# Step 3: Calculate total registered duration (all activities) per participant per day
+total_duration_per_day <- data.app.3 %>%
+  group_by(castorID, date) %>%
+  summarise(total_duration_day = sum(total_duration, na.rm = TRUE)) %>%
+  ungroup()
+
+# Step 4: Merge the two datasets to calculate the percentage of the day spent with "iemand anders"
+percentage_iemandanders <- merge(duration_iemandanders, total_duration_per_day, by = c("castorID", "date")) %>%
+  mutate(percentage_of_day_with_iemandanders = (total_duration_iemandanders / total_duration_day) * 100)
+
+# Step 5: Calculate total number of days per participant
+total_days_per_participant <- data.app.3 %>%
+  group_by(castorID) %>%
+  summarise(total_days = n_distinct(date))
+
+# Step 6: Calculate percentage of days "iemand anders" was filled in
+nrow(percentage_iemandanders) / sum(total_days_per_participant$total_days) * 100
+
+
+
+# Step 6: Calculate average percentage of time and minutes spent with "iemand anders" per participant
+average_summary <- percentage_iemandanders %>%
+  group_by(castorID) %>%
+  summarise(avg_percentage_of_day = mean(percentage_of_day_with_iemandanders, na.rm = TRUE),
+            avg_minutes_per_day = mean(total_duration_iemandanders, na.rm = TRUE)) %>%
+  ungroup()
+
+# Step 7: Merge the total number of days with the average summary
+final_summary <- merge(average_summary, total_days_per_participant, by = "castorID") %>%
+  mutate(avg_percentage_of_days = (total_days / sum(total_days)) * 100)
+
+# Display the final summary results
+final_summary
+mean(final_summary$avg_percentage_of_days)
+
+
+
 ### Accelerometer data
 ## Hip
 # ENMO
