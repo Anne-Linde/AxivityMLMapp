@@ -1,5 +1,7 @@
 ## 3) Calculate time spent in activity categories and label the movement behavior. 
 #     Then calculate time spent and frequency in all activity categories per day for all participants
+
+
 #' categorize.structure.activities
 #'
 #' @description 'categorize.structure.activities' loads activity data from the MLM app (as structured by 'link.app.castor'), categorizes the activities, calculates the duration and frequency of each activity, and saves the processed data.
@@ -119,8 +121,8 @@ categorize.structure.activities <- function(datadir, date){
   ## From long activity entry format to wide day format
   # Create wide data.frame object
   data_category <- data.frame(matrix(0, nrow = nrow(data), 
-                                     ncol = 4 + 2*length(unique(data$activity)) + 3))
-  colnames(data_category) <- c("castorID", "cohort", "date", "measurement",
+                                     ncol = 6 + 2*length(unique(data$activity)) + 3))
+  colnames(data_category) <- c("castorID", "cohort", "date", "measurement", "gender", "dob",
                                paste0("time_", unique(data$activity)),
                                paste0("freq_", unique(data$activity)),
                                "PA", "SB", "sleep")
@@ -138,6 +140,9 @@ categorize.structure.activities <- function(datadir, date){
           data_category$cohort[counter] <- unique(tmp$cohort) # Save cohort
           data_category$date[counter] <- unique(tmp$date)[day] #Save date
           data_category$measurement[counter] <- unique(tmp$measurement) #Save measurement period
+          
+          data_category$gender[counter] <- data.castor$Gender_child_1_1[which(data.castor$Participant.Id == unique(data$castorID)[pp])] #Save gender
+          data_category$dob[counter] <- data.castor$DOB_child_1_1[which(data.castor$Participant.Id == unique(data$castorID)[pp])] #Save dob
           
           data_day <- tmp[tmp$date == unique(tmp$date)[day],] #Select data for this day
           
@@ -163,6 +168,9 @@ categorize.structure.activities <- function(datadir, date){
   }
   data_category <- as.data.frame(data_category)
   data_category <- data_category[-which(data_category$castorID == 0), ]
+  
+  data_category$gender <- as.factor(ifelse(data_category$gender == 1, "F", "M")) #recode gender 1 = F, 0 = M
+  data_category$age_in_months <- as.numeric(difftime(as.Date(data_category$date), as.Date(data_category$dob, format = "%d-%m-%Y"), units = "days")) %/% 30.44   #calcualte age in months
   
   # Add day and if weekendday
   data_category$day <- weekdays(as.Date(data_category$date))

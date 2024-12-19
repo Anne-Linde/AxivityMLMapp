@@ -9,7 +9,7 @@ rm(list = ls())
 gc()
 
 # User input
-date <- "20231031"  #Date of today
+date <- "20241219"  #Date of today
 date.app <- "20230918" # Date app export
 date.castor <- "20231031" # Date castor export
 datadir.app <- paste0("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/", date.app)
