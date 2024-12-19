@@ -29,4 +29,4 @@ unnest.json(datadir.app, date)
 link.app.castor(datadir.app, datadir.castor, filename.castor, date)
 
 ## Restructure data per participant per day
-categorize.structure.activities(datadir.app, date)
+categorize.structure.activities(datadir.app, date, datadir.castor, filename.castor)
