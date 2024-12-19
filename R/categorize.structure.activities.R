@@ -8,6 +8,9 @@
 #'
 #' @param datadir A string representing the directory where the activity data files are located.
 #' @param date A string representing the date to be used in the filename for loading and saving data.
+#' @param datadir.castor A character string specifying the directory where the Castor data file is located.
+#' @param filename.castor A character string specifying the name of the Castor data file.
+
 #'
 #' @details
 #' The function performs the following steps:
@@ -25,7 +28,7 @@
 #' @importFrom utils write.csv
 #' @export
 
-categorize.structure.activities <- function(datadir, date){
+categorize.structure.activities <- function(datadir, date, datadir.castor, filename.castor){
   
   # Load in app data
   data <- read.csv(paste0(datadir, "/", date, "_activities_castor_linked.csv"))[,-1]
@@ -126,6 +129,7 @@ categorize.structure.activities <- function(datadir, date){
                                paste0("time_", unique(data$activity)),
                                paste0("freq_", unique(data$activity)),
                                "PA", "SB", "sleep")
+  data.castor <- read.csv(paste(datadir.castor, filename.castor, sep = "/"), sep = ";") #Load data.castor
   
   # Structure data per day
   counter = 1
@@ -170,7 +174,7 @@ categorize.structure.activities <- function(datadir, date){
   data_category <- data_category[-which(data_category$castorID == 0), ]
   
   data_category$gender <- as.factor(ifelse(data_category$gender == 1, "F", "M")) #recode gender 1 = F, 0 = M
-  data_category$age_in_months <- as.numeric(difftime(as.Date(data_category$date), as.Date(data_category$dob, format = "%d-%m-%Y"), units = "days")) %/% 30.44   #calcualte age in months
+  data_category$age_in_months <- as.numeric(difftime(as.Date(data_category$date), as.Date(as.character(data_category$dob), format = "%d-%m-%Y"), units = "days")) %/% 30.44   #calcualte age in months
   
   # Add day and if weekendday
   data_category$day <- weekdays(as.Date(data_category$date))
@@ -180,7 +184,13 @@ categorize.structure.activities <- function(datadir, date){
     } else {data_category$weekendday[day] <- 0}
   }
   data_category <- data_category %>% relocate(c(day, weekendday), .before = time_passivescreen)
-  
-  # Save as.csv
+  data_duration <- data_category[,c(1:23, 39:42)]
+  names(data_duration) <- c("castorID", "cohort", "date", "measurement", "gender", "dob", "day", "weekendday",
+                               "passivescreen", "sleeping", "eatingdrinking", "passivetransport", 
+                               "someoneelse", "activeplay", "personalcare", "sittinglying",
+                               "activetransport", "quietplay", "otheractivity", "dontknowplay",
+                               "activescreen", "dontknow", "dontknowscreen",
+                               "PA", "SB", "sleep", "age_in_months")  
   write.csv(data_category, paste0(datadir, "/", date, "_MLMapp_pp_duration_frequency_day.csv"))
+  write.csv(data_duration, paste0(datadir, "/", date, "_MLMapp_activiteit_gedrag_duur_per_dag.csv"))
 }  
