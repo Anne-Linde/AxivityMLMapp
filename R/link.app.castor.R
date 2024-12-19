@@ -26,10 +26,8 @@ link.app.castor <- function(datadir.app, datadir.castor, filename.castor, date) 
   castorID <- rep(NA, nrow(data.activities))
   cohort <- rep(NA, nrow(data.activities))
   measurement <- rep(NA, nrow(data.activities))
-  gender <- rep(NA, nrow(data.activities))
-  dob <- rep(NA, nrow(data.activities))
   
-  data.activities <- cbind(castorID, cohort, measurement, gender, dob, data.activities)
+  data.activities <- cbind(castorID, cohort, measurement, data.activities)
   rm(castorID, cohort, measurement)
   
   for(row in 1:nrow(data.castor)){ # For each participant in the Castor data
@@ -60,18 +58,13 @@ link.app.castor <- function(datadir.app, datadir.castor, filename.castor, date) 
           data.activities[activities_index[activity_row],1] <- data.castor$Participant.Id[row]
           data.activities[activities_index[activity_row],2] <- data.castor$Cohort[row]
           data.activities[activities_index[activity_row],3] <- measurementperiod
-          data.activities[activities_index[activity_row],4] <- data.castor$Gender_child_1_1[row]
-          data.activities[activities_index[activity_row],5] <- data.castor$DOB_child_1_1[row]
-        }
+          }
       }
     }
   }
   # Remove test data (for which no Castor ID is available)
   data.motormilestones <- data.motormilestones[-which(is.na(data.motormilestones$castorID)), ]
   data.activities <- data.activities[-which(is.na(data.activities$castorID)), ]
-  
-  data.activities$gender <- as.factor(ifelse(data.activities$gender == 1, "F", "M")) #recode gender 1 = F, 0 = M
-  data.activities$age_in_months <- as.numeric(difftime(as.Date(data.activities$date), as.Date(data.activities$dob, format = "%d-%m-%Y"), units = "days")) %/% 30.44
   
   # Save as .csv
   write.csv(data.motormilestones, paste0(datadir.app, "/", date, "_motormilestones_castor_linked.csv"))

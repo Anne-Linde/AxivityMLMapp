@@ -9,7 +9,7 @@ rm(list = ls())
 gc()
 
 # User input
-date <- "20241219"  #Date of today
+date <- "20230918"  #Date of today
 date.app <- "20230918" # Date app export
 date.castor <- "20231031" # Date castor export
 datadir.app <- paste0("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/", date.app)
@@ -29,4 +29,4 @@ unnest.json(datadir.app, date)
 link.app.castor(datadir.app, datadir.castor, filename.castor, date)
 
 ## Restructure data per participant per day
-categorize.structure.activities(datadir.app, date, datadir.castor, filename.castor)
+categorize.structure.activities(datadir.app, date, datadir.castor)

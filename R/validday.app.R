@@ -10,6 +10,10 @@
 #' 
 #' @return A data.frame containing the valid preprocessed data based on the specified criteria.
 #' 
+#' @importFrom compositions acomp
+#' @importFrom zCompositions cmultRepl
+#' @importFrom pivotCoord robCompositions
+#' 
 #' @export
 #' 
 #' @examples
@@ -45,9 +49,17 @@ validday.app <- function(data, minhours = 12, mindays = 7, savedir, CoDa = TRUE)
   valid_data$sleep[which(is.na(valid_data$sleep))] <- 0
   
   if(CoDa == TRUE){
-    ilr_transformed <- compositions::ilr(valid_data[,22:24] + 0.001) # Handling zero values in the data before transformation
-    colnames(ilr_transformed) <- c("ilr1", "ilr2")
-    valid_data <- cbind(valid_data, ilr_transformed)
+    compA <- valid_data[,c("PA","SB", "sleep")]
+    if(any(compA == 0)){
+      compA <- cmultRepl(compA, method = "CZM", output = "prop") #Count Zero Multiplicative method
+    }
+    compA <- acomp(compA)
+    compositions = NULL
+    for (i in 1:ncol(compA)) {
+      compositions = cbind(compositions, as.matrix(pivotCoord(compA, pivotvar = i)))  # Calculate compositions for the different reference variables
+    }
+    colnames(compositions) <- c("PA_SBsl", "SB_sl", "SB_PAsl", "PA_sl", "sleep_PASB", "PA_SB")
+    valid_data <- cbind(valid_data, compositions)
   }
   filename = paste0("valid_data_", minhours, "h", mindays, "d.RData")
   save(valid_data, file = paste(savedir, filename, sep = "/")) # Save data that meets the valid day criterion

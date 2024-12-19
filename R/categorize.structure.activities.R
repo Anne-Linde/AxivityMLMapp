@@ -8,8 +8,6 @@
 #'
 #' @param datadir A string representing the directory where the activity data files are located.
 #' @param date A string representing the date to be used in the filename for loading and saving data.
-#' @param datadir.castor A character string specifying the directory where the Castor data file is located.
-#' @param filename.castor A character string specifying the name of the Castor data file.
 
 #'
 #' @details
@@ -28,7 +26,7 @@
 #' @importFrom utils write.csv
 #' @export
 
-categorize.structure.activities <- function(datadir, date, datadir.castor, filename.castor){
+categorize.structure.activities <- function(datadir, dater){
   
   # Load in app data
   data <- read.csv(paste0(datadir, "/", date, "_activities_castor_linked.csv"))[,-1]
@@ -124,8 +122,8 @@ categorize.structure.activities <- function(datadir, date, datadir.castor, filen
   ## From long activity entry format to wide day format
   # Create wide data.frame object
   data_category <- data.frame(matrix(0, nrow = nrow(data), 
-                                     ncol = 6 + 2*length(unique(data$activity)) + 3))
-  colnames(data_category) <- c("castorID", "cohort", "date", "measurement", "gender", "dob",
+                                     ncol = 4 + 2*length(unique(data$activity)) + 3))
+  colnames(data_category) <- c("castorID", "cohort", "date", "measurement",
                                paste0("time_", unique(data$activity)),
                                paste0("freq_", unique(data$activity)),
                                "PA", "SB", "sleep")
@@ -144,9 +142,6 @@ categorize.structure.activities <- function(datadir, date, datadir.castor, filen
           data_category$cohort[counter] <- unique(tmp$cohort) # Save cohort
           data_category$date[counter] <- unique(tmp$date)[day] #Save date
           data_category$measurement[counter] <- unique(tmp$measurement) #Save measurement period
-          
-          data_category$gender[counter] <- data.castor$Gender_child_1_1[which(data.castor$Participant.Id == unique(data$castorID)[pp])] #Save gender
-          data_category$dob[counter] <- data.castor$DOB_child_1_1[which(data.castor$Participant.Id == unique(data$castorID)[pp])] #Save dob
           
           data_day <- tmp[tmp$date == unique(tmp$date)[day],] #Select data for this day
           
@@ -172,10 +167,7 @@ categorize.structure.activities <- function(datadir, date, datadir.castor, filen
   }
   data_category <- as.data.frame(data_category)
   data_category <- data_category[-which(data_category$castorID == 0), ]
-  
-  data_category$gender <- as.factor(ifelse(data_category$gender == 1, "F", "M")) #recode gender 1 = F, 0 = M
-  data_category$age_in_months <- as.numeric(difftime(as.Date(data_category$date), as.Date(as.character(data_category$dob), format = "%d-%m-%Y"), units = "days")) %/% 30.44   #calcualte age in months
-  
+
   # Add day and if weekendday
   data_category$day <- weekdays(as.Date(data_category$date))
   for (day in 1:length(data_category$day)) {
@@ -184,13 +176,6 @@ categorize.structure.activities <- function(datadir, date, datadir.castor, filen
     } else {data_category$weekendday[day] <- 0}
   }
   data_category <- data_category %>% relocate(c(day, weekendday), .before = time_passivescreen)
-  data_duration <- data_category[,c(1:23, 39:42)]
-  names(data_duration) <- c("castorID", "cohort", "date", "measurement", "gender", "dob", "day", "weekendday",
-                               "passivescreen", "sleeping", "eatingdrinking", "passivetransport", 
-                               "someoneelse", "activeplay", "personalcare", "sittinglying",
-                               "activetransport", "quietplay", "otheractivity", "dontknowplay",
-                               "activescreen", "dontknow", "dontknowscreen",
-                               "PA", "SB", "sleep", "age_in_months")  
+  
   write.csv(data_category, paste0(datadir, "/", date, "_MLMapp_pp_duration_frequency_day.csv"))
-  write.csv(data_duration, paste0(datadir, "/", date, "_MLMapp_activiteit_gedrag_duur_per_dag.csv"))
 }  
