@@ -1,7 +1,7 @@
 ---
 title: "Analysis of data requirements"
 author: "Annelinde Lettink"
-date: "02/02/2024"
+date: "19/12/2024"
 output: 
   pdf_document: default
   html_document: default
@@ -18,9 +18,6 @@ filename.castor <- "/20231007/Study/My_Little_Moves_export_20231007.csv"
 # Directory path and name of app data (frequency and duration per day)
 filepath.app <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/App-data/20230918"
 filename.app <- "/20230918_MLMapp_activiteit_gedrag_duur_per_dag.csv"
-# Directory path for epochdata hip and wrist
-epochdir.hip <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/hip/nonwear_removed"
-epochdir.wrist <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Accelerometer data/Measurement1/rerun/epochdata/wrist/nonwear_removed"
 
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output/reliability/"
 
@@ -31,19 +28,18 @@ my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Anne
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 # Load in Castor data (this file includes participant characteristics)
-data.castor <- load.castor(filepath.castor, filename.castor, cohort = c(3))
+data.castor <- load.castor(filepath.castor, filename.castor, cohort = c(1, 2, 3))
 ```
 
 ```{r libraries, include = FALSE}
 library(dplyr)
 library(psych)
 library(CTT)
-library(compositions)
+library(zCompositions)
+library(robCompositions)
 ```
 
-### Determine criteria for generation of reliable estimates
-
-## My Little Moves app 
+### Determine criteria for generation of reliable MLM app-derived outcomes
 
 ```{r Load MLM app data, echo=FALSE}
 # Load app data for all cohorts
@@ -51,7 +47,9 @@ data.app <- load.app(filepath.app, filename.app, cohort = c(1,2,3), measurementp
 # Note 98MLM027 (wrong in Castor, code was used by 98MLM028 adjusted at 2023-10-10 but not yet in export, this subj. was excluded so use the following lines L63-64 for exclusion of data)
 # 04MLM004 born <31 weeks
 index <- which(data.app$castorID %in% c("04MLM004", "98MLM027"))
-data.app <- data.app[-index,] # Remove rows
+if(length(index) > 0){
+  data.app <- data.app[-index,] # Remove rows
+}
 
 # Number of participants at start
 paste0("number of participants: ", length(unique(data.app$castorID)))
@@ -64,11 +62,12 @@ paste0("participants provide => 12 h on => 2 day: ", length(unique(valid_data_12
 ```{r Week weekend variability MLM app, echo=FALSE}
 # Examine differences between week and weekend days
 
-outcomes <- c("PA", "SB", "sleep", "ilr1", "ilr2")
+outcomes <- c("PA", "SB", "sleep", "PA_SBsl", "SB_sl", "SB_PAsl", "PA_sl" ,"sleep_PASB", "PA_SB")
 hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
 
 week_weekend_differences <- data.frame()
 counter = 1
+filepath.validdata <- paste0(filepath.app, "/previous submission")
 
 for(h in 1: length(hours)){
   # Load in data
@@ -80,14 +79,32 @@ for(h in 1: length(hours)){
     data <- valid_data
     rm(valid_data)
   }
+ 
   # Include data of participants with at least one weekend and one week day
   WKWKND <- data.frame()
+  data$gender <- rep(NA, nrow(data))
+  data$age_in_months <- rep(NA, nrow(data))
+
   for(pp in 1:length(unique(data$castorID))){
+    #add gender and age to the valid data and save
     tmp <- data[data$castorID == unique(data$castorID)[pp],]
+    
+    row = which(data.castor$Participant.Id == unique(tmp$castorID))[1]
+   
+    data$gender[which(data$castorID== unique(tmp$castorID))] <- data.castor$Gender_child_1_1[row]
+    data$age_in_months[which(data$castorID== unique(tmp$castorID))] <- as.numeric(difftime(as.Date(tmp$date[1], format = "%d-%m-%Y"), as.Date(data.castor$DOB_child_1_1[row], format = "%d-%m-%Y"), units = "days")) %/% 30.44
+    tmp$gender <- rep(data.castor$Gender_child_1_1[row], nrow(tmp))
+    tmp$age_in_months <- rep(as.numeric(difftime(as.Date(tmp$date[1], format = "%d-%m-%Y"), as.Date(data.castor$DOB_child_1_1[row], format = "%d-%m-%Y"), units = "days")) %/% 30.44, nrow(tmp))
+
     if(length(unique(tmp$weekenddag)) == 2){
       WKWKND <- rbind(WKWKND, tmp)
     }
   }
+  WKWKND$gender <- as.factor(ifelse(WKWKND$gender == 1, "F", "M")) #recode gender 1 = F, 0 = M
+  data$gender <- as.factor(ifelse(data$gender == 1, "F", "M")) #recode gender 1 = F, 0 = M
+
+save(data, file = paste0(filepath.app, "/valid_data_", hours[h], "h2d_complete.RData"))
+  
   
   for(out in 1:length(outcomes)){
     week_weekend_differences[counter, 1] <- hours[h]
@@ -104,13 +121,13 @@ for(h in 1: length(hours)){
       week_weekend_differences[counter, 7] <- median(unlist(subset(WKWKND, weekenddag == 1)[col]), na.rm = T)
       week_weekend_differences[counter, 8] <- quantile(unlist(subset(WKWKND, weekenddag == 1)[col]), probs = 0.25, na.rm = T)
       week_weekend_differences[counter, 9] <- quantile(unlist(subset(WKWKND, weekenddag == 1)[col]), probs = 0.75, na.rm = T)
-      week_weekend_differences[counter, c(10:13)] <- NA
+      week_weekend_differences[counter, c(10:16)] <- NA
       if(outcomes[out] == "PA"){
-          differences <- lme4::lmer(log(PA + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F) } 
+          differences <- lme4::lmer(log(PA + 0.001) ~ weekenddag + (1 | castorID) + gender + age_in_months, WKWKND, REML = F) } 
       else if(outcomes[out] == "SB"){
-          differences <- lme4::lmer(log(SB + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F) } 
+          differences <- lme4::lmer(log(SB + 0.001) ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F) } 
       else{
-          differences <- lme4::lmer(log(sleep + 0.001) ~ weekenddag + (1 | castorID), WKWKND, REML = F)
+          differences <- lme4::lmer(log(sleep + 0.001) ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F)
        }
     
     } else {
@@ -119,20 +136,30 @@ for(h in 1: length(hours)){
       week_weekend_differences[counter, 11] <- sd(unlist(subset(data, weekenddag == 0)[col]), na.rm = T)
       week_weekend_differences[counter, 12] <- mean(unlist(subset(data, weekenddag == 1)[col]), na.rm = T)
       week_weekend_differences[counter, 13] <- sd(unlist(subset(data, weekenddag == 1)[col]), na.rm = T)
-      if(outcomes[out] == "ilr1"){
-        differences <- lme4::lmer(ilr1 ~ weekenddag + (1 | castorID), WKWKND, REML = F) }
-      else{
-        differences <- lme4::lmer(ilr2 ~ weekenddag + (1 | castorID), WKWKND, REML = F) }
+      if(outcomes[out] == "PA_SBsl"){
+        differences <- lme4::lmer(PA_SBsl ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F) }
+      else if(outcomes[out] == "SB_sl"){
+        differences <- lme4::lmer(SB_sl ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F) }
+      else if(outcomes[out] == "SB_PAsl"){
+        differences <- lme4::lmer(SB_PAsl ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F) }
+      else if(outcomes[out] == "PA_sl"){
+        differences <- lme4::lmer(PA_sl ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F) }
+      else if(outcomes[out] == "sleep_PASB"){
+        differences <- lme4::lmer(sleep_PASB ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F)       } else{
+        differences <- lme4::lmer(PA_SB ~ weekenddag + (1 | castorID)+ gender + age_in_months, WKWKND, REML = F) }
     }
     test <- car::Anova(differences)
-    week_weekend_differences[counter, 14] <- test$`Pr(>Chisq)`
+    week_weekend_differences[counter, 14] <- test$`Pr(>Chisq)`[1]
+    week_weekend_differences[counter, 15] <- test$`Pr(>Chisq)`[2]
+    week_weekend_differences[counter, 16] <- test$`Pr(>Chisq)`[3]
+
     counter = counter + 1
   }
-  colnames(week_weekend_differences) <- c("hours", "outcome", "n_participants","Median_week", "Q1_week", "Q3_week", "Median_weekend", "Q1_weekend", "Q3_weekend", "Mean_week", "sd_week", "Mean_weekend", "sd_weekend", "p_value")
+ colnames(week_weekend_differences) <- c("hours", "outcome", "n_participants","Median_week", "Q1_week", "Q3_week", "Median_weekend", "Q1_weekend", "Q3_weekend", "Mean_week", "sd_week", "Mean_weekend", "sd_weekend", "difference_p_value", "gender_p_value", "age_p_value")
 }
 
-save(week_weekend_differences, file = paste0(savedir, "MLMapp/week_weekend.RData")) # Save week weekend difference tests
-write.csv(week_weekend_differences, file = paste0(savedir, "MLMapp/week_weekend.csv"))
+save(week_weekend_differences, file = paste0(savedir, "/week_weekend.RData")) # Save week weekend difference tests
+write.csv(week_weekend_differences, file = paste0(savedir, "/week_weekend.csv"))
 
 ```
 
@@ -149,24 +176,22 @@ repetition <- c()
 count = 0
 result_data <- data.frame()
 
-load(paste0(savedir, "MLMapp/week_weekend.RData")) # Save week weekend difference tests
+load(paste0(savedir, "/week_weekend.RData")) # Save week weekend difference tests
 
 # For all valid wear criteria
 for(d in 1:length(days)){
   for(h in 1: length(hours)){
-    filename = paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d.RData")
+    filename = paste0(filepath.app, "/valid_data_", hours[h], "h", days[d], "d_complete.RData")
     if(file.exists(filename)){
        load(filename)
-       data <- valid_data
-       rm(valid_data)
      } else {
       data <- validday.app(data.app, minhours = hours[h], mindays = days[d], savedir = filepath.app, CoDa = TRUE) 
      }
     
     cat(paste0("participants provide at least ", hours[h], " hours on ", days[d], " days: ", ... = length(unique(data$castorID)), "(", length(unique(data$castorID))/length(unique(data.app$castorID))*100, " %)", "/n"))
     n.pp[d, h] <- length(unique(data$castorID))
-    temp <- cbind(data$castorID, data$weekenddag, data$dag, data[,22:26])
-    colnames(temp) <- c("id", "weekendday", "day", "PA", "SB", "sleep", "ilr1", "ilr2")
+    temp <- cbind(data$castorID, data$weekenddag, data$dag, data[,outcomes])
+    colnames(temp) <- c("id", "weekendday", "day", outcomes)
     temp$id <- as.factor(temp$id)
     temp$weekendday <- as.factor(temp$weekendday)
     temp$day <- as.factor(temp$day)
@@ -174,25 +199,25 @@ for(d in 1:length(days)){
     #Select random number of days, repeat this five times and save the average single day ICC.
     ndays <- rep(1:days[d], length(unique(temp$id)))
     ntimes = 5 #42 number permutations from 2 out 7
-    for(variable in 4:ncol(temp)){ #Calculate the mean ICC for each outcome
-      outcome <- c(outcome, colnames(temp)[variable])
+    for(variable in 1:length(outcomes)){ #Calculate the mean ICC for each outcome
+      outcome <- c(outcome, outcomes[variable])
       count = count + 1
       temp.icc_temp <- data.frame()
       for(rep in 1:ntimes){
         repetition <- c(repetition, rep)
         
         sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
-        save(sample, file= paste0(savedir, "/sampling/app/sample_", rep, "_", days[d], "d", hours[h], "h.RData"))
+        save(sample, file= paste0(savedir, "/sampling/sample_", rep, "_", days[d], "d", hours[h], "h.RData"))
 
         var.icc <- data.frame()
         #sample[which(is.na(sample[,variable])), variable] <- 0
-        temp.var <- cbind(sample$id,  rep(1:days[d], nrow(sample)), sample[,variable])
+        temp.var <- cbind(sample$id,  rep(1:days[d], nrow(sample)), sample[,outcomes[variable]])
         colnames(temp.var) <- c("id", "day", "outcome")
           
         # Create matrix as input for days (cols) and participants (rows) containing the variable values
         m <- reshape(temp.var, idvar = "id", timevar = "day", direction = "wide")
 
-        if(variable == 3 | variable == 4 | variable == 5){
+        if(outcomes[variable] == "PA" | outcomes[variable] == "SB" | outcomes[variable] == "sleep"){
           n <- log(m[,2:ncol(m)] + 0.001)
           m <- cbind(m[,1], n)
         }
@@ -205,7 +230,7 @@ for(d in 1:length(days)){
       day <- c(day, days[d])
       hour <- c(hour, hours[h])
 
-      cat("Outcome: ", paste0(colnames(sample)[variable], ": ICC ", hours[h], " hours ", days[d], " days: ", colMeans(temp.icc_temp)))
+      cat("Outcome: ", paste0(colnames(sample)[outcomes[variable]], ": ICC ", hours[h], " hours ", days[d], " days: ", colMeans(temp.icc_temp)))
     }
   }
 }
@@ -213,10 +238,10 @@ for(d in 1:length(days)){
 temp.icc <- cbind(hour, day, outcome, temp.icc)
 colnames(temp.icc) <- c("hour", "day", "outcome", "ICC", "LB", "UB")
 
-write.table(n.pp, file = paste0(savedir, "MLMapp/reliability_sample_size.txt"), sep = ",", quote = FALSE, row.names = F)
-write.csv(temp.icc, file = paste0(savedir, "MLMapp/ICC_SpearmanBrown.csv"))
+write.table(n.pp, file = paste0(savedir, "/reliability_sample_size.txt"), sep = ",", quote = FALSE, row.names = F)
+write.csv(temp.icc, file = paste0(savedir, "/ICC_SpearmanBrown.csv"))
 
-save(temp.icc, file = paste0(savedir, "MLMapp/ICC_SpearmanBrown.RData")) # Save data that meets the valid day criterion
+save(temp.icc, file = paste0(savedir, "/ICC_SpearmanBrown.RData")) # Save data that meets the valid day criterion
 ```
 
 ```{r Average ICCs MLM app wear time hours Spearman-Brown, echo=FALSE}
@@ -224,19 +249,32 @@ hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
 temp.icc.PA <- temp.icc[which(temp.icc$outcome == "PA"),]
 temp.icc.SB <- temp.icc[which(temp.icc$outcome == "SB"),]
 temp.icc.sleep <- temp.icc[which(temp.icc$outcome == "sleep"),]
-temp.icc.ilr1 <- temp.icc[which(temp.icc$outcome == "ilr1"),]
-temp.icc.ilr2 <- temp.icc[which(temp.icc$outcome == "ilr2"),]
+temp.icc.ilrpa <- temp.icc[which(temp.icc$outcome == "PA_SBsl"),]
+temp.icc.ilrpa2 <- temp.icc[which(temp.icc$outcome == "SB_sl"),]
+temp.icc.ilrsb <- temp.icc[which(temp.icc$outcome == "SB_PAsl"),]
+temp.icc.ilrsb2 <- temp.icc[which(temp.icc$outcome == "PA_sl"),]
+temp.icc.ilrsleep <- temp.icc[which(temp.icc$outcome == "sleep_PASB"),]
+temp.icc.ilrsleep2 <- temp.icc[which(temp.icc$outcome == "PA_SB"),]
 
 ICC.PA <- data.frame()
 ICC.SB <- data.frame()
 ICC.sleep <- data.frame()
-ICC.ilr1 <- data.frame()
-ICC.ilr2 <- data.frame()
+ICC.ilrpa <- data.frame()
+ICC.ilrpa2 <- data.frame()
+ICC.ilrsb <- data.frame()
+ICC.ilrsb2 <- data.frame()
+ICC.ilrsleep <- data.frame()
+ICC.ilrsleep2 <- data.frame()
+
 sb.PA <- c()
 sb.SB <- c()
 sb.sleep <- c()
-sb.ilr1 <- c()
-sb.ilr2 <- c()
+sb.ilrpa <- c()
+sb.ilrpa2 <- c()
+sb.ilrsb <- c()
+sb.ilrsb2 <- c()
+sb.ilrsleep <- c()
+sb.ilrsleep2 <- c()
 
 # Averages for all day criteria
 for(h in 1:length(hours)){
@@ -247,10 +285,21 @@ for(h in 1:length(hours)){
     sb.SB <- c(sb.SB, CTT::spearman.brown(ICC.SB[h,1], .7, "r")[[1]])
   ICC.sleep <- rbind(ICC.sleep, colMeans(temp.icc.sleep[which(temp.icc.sleep$hour == hours[h]),4:6]))
     sb.sleep <- c(sb.sleep, CTT::spearman.brown(ICC.sleep[h,1], .7, "r")[[1]])
-  ICC.ilr1 <- rbind(ICC.ilr1, colMeans(temp.icc.ilr1[which(temp.icc.ilr1$hour == hours[h]),4:6]))
-    sb.ilr1 <- c(sb.ilr1, CTT::spearman.brown(ICC.ilr1[h,1], .7, "r")[[1]])
-  ICC.ilr2 <- rbind(ICC.ilr2, colMeans(temp.icc.ilr2[which(temp.icc.ilr2$hour == hours[h]),4:6]))
-sb.ilr2 <- c(sb.ilr2, CTT::spearman.brown(ICC.ilr2[h,1], .7, "r")[[1]])
+    
+  ICC.ilrpa <- rbind(ICC.ilrpa, colMeans(temp.icc.ilrpa[which(temp.icc.ilrpa$hour == hours[h]),4:6]))
+    sb.ilrpa <- c(sb.ilrpa, CTT::spearman.brown(ICC.ilrpa[h,1], .7, "r")[[1]])
+  ICC.ilrpa2 <- rbind(ICC.ilrpa2, colMeans(temp.icc.ilrpa2[which(temp.icc.ilrpa2$hour == hours[h]),4:6]))
+sb.ilrpa2 <- c(sb.ilrpa2, CTT::spearman.brown(ICC.ilrpa2[h,1], .7, "r")[[1]])
+
+  ICC.ilrsb <- rbind(ICC.ilrsb, colMeans(temp.icc.ilrsb[which(temp.icc.ilrsb$hour == hours[h]),4:6]))
+    sb.ilrsb <- c(sb.ilrsb, CTT::spearman.brown(ICC.ilrsb[h,1], .7, "r")[[1]])
+  ICC.ilrsb2 <- rbind(ICC.ilrsb2, colMeans(temp.icc.ilrsb2[which(temp.icc.ilrsb2$hour == hours[h]),4:6]))
+sb.ilrsb2 <- c(sb.ilrsb2, CTT::spearman.brown(ICC.ilrsb2[h,1], .7, "r")[[1]])
+
+ ICC.ilrsleep <- rbind(ICC.ilrsleep, colMeans(temp.icc.ilrsleep[which(temp.icc.ilrsleep$hour == hours[h]),4:6]))
+    sb.ilrsleep <- c(sb.ilrsleep, CTT::spearman.brown(ICC.ilrsleep[h,1], .7, "r")[[1]])
+  ICC.ilrsleep2 <- rbind(ICC.ilrsleep2, colMeans(temp.icc.ilrsleep2[which(temp.icc.ilrsleep2$hour == hours[h]),4:6]))
+sb.ilrsleep2 <- c(sb.ilrsleep2, CTT::spearman.brown(ICC.ilrsleep2[h,1], .7, "r")[[1]])
 }
 
 rownames(ICC.PA) <- hours
@@ -268,251 +317,33 @@ ICC.sleep <- cbind(ICC.sleep, sb.sleep)
 colnames(ICC.sleep) <- c("ICC", "LB", "UB", "SB70")
 write.csv(ICC.sleep, file = paste0(savedir, "MLMapp/ICC_Spearman_sleep.csv"))
 
-rownames(ICC.ilr1) <- hours
-ICC.ilr1 <- cbind(ICC.ilr1, sb.ilr1)
-colnames(ICC.ilr1) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.ilr1, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr1.csv"))
+rownames(ICC.ilrpa) <- hours
+ICC.ilrpa <- cbind(ICC.ilrpa, sb.ilrpa)
+colnames(ICC.ilrpa) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilrpa, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr.PA.csv"))
 
-rownames(ICC.ilr2) <- hours
-ICC.ilr2 <- cbind(ICC.ilr2, sb.ilr2)
-colnames(ICC.ilr2) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.ilr2, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr2.csv"))
-```
+rownames(ICC.ilrpa2) <- hours
+ICC.ilrpa2 <- cbind(ICC.ilrpa2, sb.ilrpa2)
+colnames(ICC.ilrpa2) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilrpa2, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr.PA2.csv"))
 
-## Accelerometers
+rownames(ICC.ilrsb) <- hours
+ICC.ilrsb <- cbind(ICC.ilrsb, sb.ilrsb)
+colnames(ICC.ilrsb) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilrsb, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr.SB.csv"))
 
-```{r Load Axivity data, echo=FALSE}
-# Number of accelerometer files at start
-filelist.hip <- list.files(epochdir.hip, pattern = ".RData")
-filelist.wrist <- list.files(epochdir.wrist, pattern = ".RData")
-paste0("accelerometer files hip: ", length(filelist.hip))
-paste0("accelerometer files wrist: ", length(filelist.wrist))
+rownames(ICC.ilrsb2) <- hours
+ICC.ilrsb2 <- cbind(ICC.ilrsb2, sb.ilrsb2)
+colnames(ICC.ilrsb2) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilrsb2, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr.SB2.csv"))
 
-# Select files that provide => 12 hours on at least two days
-savedir.hip <- paste0(epochdir.hip, "/2d12h")
-validday.axivity(epochdir.hip, epochlength = 5, minhours = 12, mindays = 2, savedir = savedir.hip, data.castor)
-savedir.wrist <- paste0(epochdir.wrist, "/2d12h")
-validday.axivity(epochdir.wrist, epochlength = 5, minhours = 12, mindays = 2, savedir = savedir.wrist, data.castor)
-paste0("hip: accelerometer files that provide at least 12 h on 2 days: ", length(list.files(savedir.hip, pattern = ".RData")), "(", length(list.files(savedir.hip, pattern = ".RData"))/length(filelist.hip)*100, " %)")
-paste0("wrist: accelerometer files that provide at least 12 h on 2 days: ", length(list.files(savedir.wrist, pattern = ".RData")), "(", length(list.files(savedir.wrist, pattern = ".RData"))/length(filelist.wrist)*100, " %)")
-```
+rownames(ICC.ilrsleep) <- hours
+ICC.ilrsleep <- cbind(ICC.ilrsleep, sb.ilrsleep)
+colnames(ICC.ilrsleep) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilrsleep, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr.sleep.csv"))
 
-```{r Week weekend variability Axivity, echo=FALSE}
-# Examine differences between week and weekend days
-attachment <- c("hip", "wrist")
-outcomes <- c("ENMO", "MAD")
-hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
-
-week_weekend_differences <- data.frame()
-counter = 1
-
-for(placement in 1:length(attachment)){
-  for(h in 1: length(hours)){
-    if(attachment[placement] == "hip"){
-      epochdir <- epochdir.hip
-    } else {
-      epochdir <- epochdir.wrist
-    }
-    savedir.axivity <- paste0(epochdir, "/2d", hours[h], "h")
-
-    # Does the valid data selection for two days of .. hours exist?
-    if(!dir.exists(savedir.axivity)){
-      dir.create(savedir.axivity)
-      validday.axivity(epochdir, epochlength = 5, minhours = hours[h], mindays = 2, savedir = savedir.axivity, data.castor)
-    }
-    # Derive outcomes for accelerometer: Median ENMO, Median MAD
-    if(!file.exists(paste0(savedir.axivity, "/results/axivity.estimates.RData"))){
-      estimates.axivity(savedir.axivity)
-    } 
-    load(paste0(savedir.axivity, "/results/axivity.estimates.RData"))
-   
-    # Include data of participants with at least one weekend day
-    WKWKND <- data.frame()
-    for(pp in 1:length(unique(axivity.estimates$id))){
-      tmp <- axivity.estimates[axivity.estimates$id == unique(axivity.estimates$id)[pp],]
-      if(length(unique(tmp$weekday)) == 2){
-        WKWKND <- rbind(WKWKND, tmp)
-      }
-    }
-  for(out in 1:length(outcomes)){
-    week_weekend_differences[counter, 1] <- hours[h]
-    week_weekend_differences[counter, 2] <- attachment[placement]
-    week_weekend_differences[counter, 3] <- outcomes[out]
-    week_weekend_differences[counter, 4] <- length(unique(WKWKND$id))
-    col <- which(colnames(WKWKND) == outcomes[out])
-    if(outcomes[out] %in% c("ENMO", "MAD")){
-      week_weekend_differences[counter, 5] <- median(unlist(subset(WKWKND, weekday == 1)[col]), na.rm = T)
-      week_weekend_differences[counter, 6] <- quantile(unlist(subset(WKWKND, weekday == 1)[col]), probs = 0.25, na.rm = T)
-      week_weekend_differences[counter, 7] <- quantile(unlist(subset(WKWKND, weekday == 1)[col]), probs = 0.75, na.rm = T)
-      week_weekend_differences[counter, 8] <- median(unlist(subset(WKWKND, weekday == 0)[col]), na.rm = T)
-      week_weekend_differences[counter, 9] <- quantile(unlist(subset(WKWKND, weekday == 0)[col]), probs = 0.25, na.rm = T)
-      week_weekend_differences[counter, 10] <- quantile(unlist(subset(WKWKND, weekday == 0)[col]), probs = 0.75, na.rm = T)
-
-      if(outcomes[out] == "ENMO"){
-        differences <- lme4::lmer(log(ENMO + 0.001) ~ weekday + (1 | id), WKWKND, REML = F)
-      } else{
-        differences <- lme4::lmer(log(MAD + 0.001) ~ weekday + (1 | id), WKWKND, REML = F)
-      }
-      test <- car::Anova(differences)
-      week_weekend_differences[counter, 11] <- test$`Pr(>Chisq)`
-      counter = counter + 1
-    }
-  }
-  colnames(week_weekend_differences) <- c("hours", "placement", "outcome", "n_participants", "Median_week", "Q1_week",
-                                            "Q3_week", "Median_weekend", "Q1_weekend", "Q3_weekend", "p_value")
-  }
-}
-# Save week weekend difference tests
-save(week_weekend_differences, file = paste0(savedir, "Axivity/week_weekend.RData")) 
-write.csv(week_weekend_differences, file = paste0(savedir, "Axivity/week_weekend.csv"))
-```
-
-```{r Single day ICCs Axivity all criteria, include = FALSE}
-attachment <- c("hip", "wrist")
-days <- c(2, 3, 4, 5, 6, 7)
-hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
-
-load(paste0(savedir, "Axivity/week_weekend.RData")) # Save week weekend difference tests
-
-# For all valid wear criteria
-for(placement in 1:length(attachment)){
-  n.pp <- data.frame()
-  temp.icc <- data.frame(ncol(3))
-  day <- c()
-  hour <- c()
-  outcome <- c()
-  repetition <- c()
-  count = 0
-  result_data <- data.frame()
-  wkwkd_differences <- week_weekend_differences[which(week_weekend_differences$placement == attachment[placement]),]
-  for(d in 1:length(days)){
-    for(h in 1: length(hours)){
-      if(attachment[placement] == "hip"){
-        epochdir <- epochdir.hip
-      } else {
-        epochdir <- epochdir.wrist
-      }
-      savedir.axivity <- paste0(epochdir, "/", days[d], "d", hours[h], "h")
-      # Does the valid data selection for two days of .. hours exist?
-      if(!dir.exists(savedir.axivity)){
-        dir.create(savedir.axivity)
-        validday.axivity(epochdir, epochlength = 5, minhours = hours[h], mindays = days[d], savedir = savedir.axivity,
-                         data.castor)
-      }
-      # Derive outcomes for accelerometer: Median ENMO, Median MAD
-      if(!file.exists(paste0(savedir.axivity, "/results/axivity.estimates.RData"))){
-        estimates.axivity(savedir.axivity)
-      } 
-      load(paste0(savedir.axivity, "/results/axivity.estimates.RData"))
-      
-      cat(paste0("participants provide at least ", hours[h], " hours on ", days[d], " days: ",
-                 length(unique(axivity.estimates$id)), "(",
-                 length(unique(axivity.estimates$id))/length(list.files(epochdir, pattern = ".RData"))*100, " %)"))
-    n.pp[d, h] <- length(unique(axivity.estimates$id))
-    
-    temp <- as.data.frame(cbind(axivity.estimates$id, axivity.estimates$weekday, axivity.estimates$days,
-                                axivity.estimates$ENMO,axivity.estimates$MAD))
-    colnames(temp) <- c("id", "weekday", "day", "ENMO", "MAD")
-    temp$id <- as.factor(temp$id)
-    temp$weekday <- as.factor(temp$weekday)
-    temp$day <- as.factor(temp$day)
-    temp$ENMO <- as.numeric(temp$ENMO)
-    temp$MAD <- as.numeric(temp$MAD)
-
-    #Select random number of days, repeat this five times and save the average single day ICC.
-    ndays <- rep(1:days[d], length(unique(temp$id)))
-    ntimes = 5 #42 number permutations from 2 out 7
-    for(variable in 4:ncol(temp)){ #Calculate the mean ICC for each outcome
-      outcome <- c(outcome, colnames(temp)[variable])
-      count = count + 1
-      temp.icc_temp <- data.frame()
-      for(rep in 1:ntimes){
-        repetition <- c(repetition, rep)
-        sample <- temp %>% group_by(id) %>% slice_sample(n = days[d])
-
-        save(sample, file= paste0(savedir, "/sampling/axivity/sample_", rep, "_", days[d], "d", hours[h], "h.RData"))
-
-        var.icc <- data.frame()
-        temp.var <- cbind(sample$id,  rep(1:days[d], nrow(sample)), sample[,variable])
-        colnames(temp.var) <- c("id", "day", "outcome")
-          
-        # Create matrix as input for days (cols) and participants (rows) containing the variable values
-        m <- reshape(temp.var, idvar = "id", timevar = "day", direction = "wide")
-        
-        n <- log(m[,2:ncol(m)] + 0.001)
-        m <- cbind(m[,1], n)
-        
-        # Calculate ICC
-        icc <- psych::ICC(m[,-1])$results[2,]
-        temp.icc_temp <- rbind(temp.icc_temp, c(icc$ICC, icc$`lower bound`, icc$`upper bound`))
-      }
-      temp.icc <- rbind(temp.icc, colMeans(temp.icc_temp))
-      day <- c(day, days[d])
-      hour <- c(hour, hours[h])
-
-      cat("Outcome: ", paste0(colnames(sample)[variable], ": ICC ", hours[h], " hours ", days[d], " days: ", colMeans(temp.icc_temp)))
-    }
-  }
-  }
-  temp.icc <- cbind(hour, day, outcome, temp.icc)
-  colnames(temp.icc) <- c("hour", "day", "outcome", "ICC", "LB", "UB")
-  write.table(n.pp, file = paste0(savedir, "Axivity/", attachment[placement], "/reliability_sample_size.txt"), sep = ",",
-              quote = FALSE, row.names = F)
-  write.csv(temp.icc, file = paste0(savedir, "Axivity/", attachment[placement], "/ICC_SpearmanBrown.csv"))
-  save(temp.icc, file = paste0(savedir, "Axivity/", attachment[placement], "/ICC_SpearmanBrown.RData")) # Save data that meets the valid day criterion
-}
-```
-
-```{r Average ICCs Axivity wear time hours Spearman-Brown, echo=FALSE}
-hours <- c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
-
-load(file = paste0(savedir, "Axivity/hip/ICC_SpearmanBrown.RData"))
-temp.icc.hip.ENMO <- temp.icc[which(temp.icc$outcome == "ENMO"),]
-temp.icc.hip.MAD <- temp.icc[which(temp.icc$outcome == "MAD"),]
-load(file = paste0(savedir, "Axivity/wrist/ICC_SpearmanBrown.RData"))
-temp.icc.wrist.ENMO <- temp.icc[which(temp.icc$outcome == "ENMO"),]
-temp.icc.wrist.MAD <- temp.icc[which(temp.icc$outcome == "MAD"),]
-
-ICC.hip.ENMO <- data.frame()
-ICC.hip.MAD <- data.frame()
-ICC.wrist.ENMO <- data.frame()
-ICC.wrist.MAD <- data.frame()
-sb.hip.ENMO <- c()
-sb.hip.MAD <- c()
-sb.wrist.ENMO <- c()
-sb.wrist.MAD <- c()
-
-# Averages for all day criteria
-for(h in 1:length(hours)){
-
-  ICC.hip.ENMO <- rbind(ICC.hip.ENMO, colMeans(temp.icc.hip.ENMO[which(temp.icc.hip.ENMO$hour == hours[h]),4:6]))
-  sb.hip.ENMO <- c(sb.hip.ENMO, CTT::spearman.brown(ICC.hip.ENMO[h,1], .7, "r")[[1]])
-  ICC.hip.MAD <- rbind(ICC.hip.MAD, colMeans(temp.icc.hip.MAD[which(temp.icc.hip.MAD$hour == hours[h]),4:6]))
-  sb.hip.MAD <- c(sb.hip.MAD, CTT::spearman.brown(ICC.hip.MAD[h,1], .7, "r")[[1]])
-  
-  ICC.wrist.ENMO <- rbind(ICC.wrist.ENMO, colMeans(temp.icc.wrist.ENMO[which(temp.icc.wrist.ENMO$hour == hours[h]),4:6]))
-  sb.wrist.ENMO <- c(sb.wrist.ENMO, CTT::spearman.brown(ICC.wrist.ENMO[h,1], .7, "r")[[1]])
-  ICC.wrist.MAD <- rbind(ICC.wrist.MAD, colMeans(temp.icc.wrist.MAD[which(temp.icc.wrist.MAD$hour == hours[h]),4:6]))
-  sb.wrist.MAD <- c(sb.wrist.MAD, CTT::spearman.brown(ICC.wrist.MAD[h,1], .7, "r")[[1]])
-}
-
-rownames(ICC.hip.ENMO) <- hours
-ICC.hip.ENMO <- cbind(ICC.hip.ENMO, sb.hip.ENMO)
-colnames(ICC.hip.ENMO) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.hip.ENMO, file = paste0(savedir, "Axivity/hip/ICC_Spearman_ENMO.csv"))
-
-rownames(ICC.hip.MAD) <- hours
-ICC.hip.MAD <- cbind(ICC.hip.MAD, sb.hip.MAD)
-colnames(ICC.hip.MAD) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.hip.MAD, file = paste0(savedir, "Axivity/hip/ICC_Spearman_MAD.csv"))
-
-rownames(ICC.wrist.ENMO) <- hours
-ICC.wrist.ENMO <- cbind(ICC.wrist.ENMO, sb.wrist.ENMO)
-colnames(ICC.wrist.ENMO) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.wrist.ENMO, file = paste0(savedir, "Axivity/wrist/ICC_Spearman_ENMO.csv"))
-
-rownames(ICC.wrist.MAD) <- hours
-ICC.wrist.MAD <- cbind(ICC.wrist.MAD, sb.wrist.MAD)
-colnames(ICC.wrist.MAD) <- c("ICC", "LB", "UB", "SB70")
-write.csv(ICC.wrist.MAD, file = paste0(savedir, "Axivity/wrist/ICC_Spearman_MAD.csv"))
+rownames(ICC.ilrsleep2) <- hours
+ICC.ilrsleep2 <- cbind(ICC.ilrsleep2, sb.ilrsleep2)
+colnames(ICC.ilrsleep2) <- c("ICC", "LB", "UB", "SB70")
+write.csv(ICC.ilrsleep2, file = paste0(savedir, "MLMapp/ICC_Spearman_ilr.sleep2.csv"))
 ```
