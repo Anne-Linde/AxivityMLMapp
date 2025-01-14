@@ -56,7 +56,7 @@ validday.app <- function(data, minhours = 12, mindays = 7, savedir, CoDa = TRUE)
     compA <- acomp(compA)
     compositions = NULL
     for (i in 1:ncol(compA)) {
-      compositions = cbind(compositions, as.matrix(pivotCoord(compA, pivotvar = i)))  # Calculate compositions for the different reference variables
+      compositions = cbind(compositions, as.matrix(robCompositions::pivotCoord(compA, pivotvar = i)))  # Calculate compositions for the different reference variables
     }
     colnames(compositions) <- c("PA_SBsl", "SB_sl", "SB_PAsl", "PA_sl", "sleep_PASB", "PA_SB")
     valid_data <- cbind(valid_data, compositions)
