@@ -71,6 +71,7 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
       }
       categories <- unique(app_day$activity)
       palette <- viridis(length(categories), option = "D")
+
       
       for(entry in 1:nrow(app_day)){ # Select axivity data for the timeslots an activity is filled in
         
@@ -83,12 +84,14 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
             df_hip$xmin <- as.POSIXct(xmin, origin = "1970-01-01")
             df_hip$xmax <- as.POSIXct(xmax, origin = "1970-01-01")
             df_hip$col <- col
+            figure_labels = c("Personal care", "Active play", "Sitting/lying", "Sleeping", "Eating/drinking", "Calm Play", "Passive transport")
             
             g_hip <- ggplot() + 
-              geom_rect(data = df_hip, mapping= aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 
+              geom_rect(data = df_hip, mapping= aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = col)) + 
               geom_line(data = data.hip_day, aes(data.hip_day$timestamp, data.hip_day$ENMO, group = data.hip_day$activity)) + 
               theme_classic() + 
               scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
+              #scale_fill_manual(name = "App categories", values = palette, labels = figure_labels) +
               scale_y_continuous(name="Hip") +
               xlab("Time (hh:mm:ss)") #, date_labels = function(x) strftime(as.POSIXct(x, origin = "1970-01-01"), format = "%H:%M:%S")) +
             #ggtitle(paste0("Participant: ", pp, ", Date: ", unique(as.Date(as.POSIXct(df_wrist$xmax, origin = "1970-01-01"))))) +
@@ -100,13 +103,14 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
             df_wrist$xmin <- as.POSIXct(xmin, origin = "1970-01-01")
             df_wrist$xmax <- as.POSIXct(xmax, origin = "1970-01-01")
             df_wrist$col <- col
-            figure_labels = c("Personal care", "Active play", "Sitting/lying", "Sleeping", "Eating/drinking", "Calm play", "Passive transport")
+            
+            figure_labels = c("Personal care", "Active play", "Sitting/lying", "Sleeping", "Eating/drinking", "Calm Play", "Passive transport")
             g_wrist <- ggplot() + 
+              geom_rect(data = df_wrist, mapping=aes(xmin = anytime(xmin), xmax = anytime(xmax), ymin = ymin, ymax = ymax, fill = col)) + 
               geom_line(data = data.wrist_day, aes(data.wrist_day$timestamp, data.wrist_day$ENMO, group = data.wrist_day$activity)) + 
-              geom_rect(data = df_wrist, mapping=aes(xmin = anytime(xmin), xmax = anytime(xmax), ymin = ymin, ymax = ymax, fill = col), alpha = 0.35) + 
               theme_classic() + 
-              scale_fill_manual(name = "App categories", values = palette, labels = figure_labels) +
-              #scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
+              #scale_fill_manual(name = "App categories", values = palette, labels = figure_labels) +
+              scale_fill_manual(name = "App categories", values = palette, labels = categories[sort(palette, index.return = TRUE)$ix]) +
               scale_y_continuous(name="Wrist") +
               xlab("Time (hh:mm:ss)") #, labels = function(x) strftime(as.POSIXct(x, origin = "1970-01-01"), format = "%H:%M:%S")) +
             #ggtitle(paste0("Participant: ", pp, ", Date: ", unique(as.Date(as.POSIXct(df_wrist$xmax, origin = "1970-01-01"))))) +
@@ -117,7 +121,7 @@ create.overlayplot <- function(data.app, filepath.hip, filepath.wrist, pp, saved
         }
       }
       if(exists("g_hip") & exists("g_wrist")){
-        combine.save.plots(g_wrist, g_hip, "overlay", savedir, filename = paste0("/plots/overlay/hipwrist_combined/", pp, "_combined", "day_", days[day], ".jpeg"))
+        combine.save.plots(g_hip,g_wrist,  "overlay", savedir, filename = paste0("/plots/overlay/hipwrist_combined/", pp, "_combined", "day_", days[day], ".jpeg"))
       }
     }
   }
