@@ -20,8 +20,8 @@ filename.app.day <- paste0("/", date, "_MLMapp_pp_duration_frequency_day.csv")
 savedir <- "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/output"
 
 # source functions directly from file, to be replaced by package installation:
-my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/Analyses/AxivityMLMapp/R"
-for (function_file in dir(my_functions_folder, full.names = TRUE)) source(function_file) #load functions
+my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
+for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
 ## Load app data
 data.app <- load.app(filepath.app, filename.app, cohort = c(3), measurementperiod = 1, sep = ",") # Load app data
@@ -37,6 +37,12 @@ load("/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Mov
 for(pp in 1:length(unique(data.pp$castorID))){
   create.overlayplot(data.app, filepath.hip, filepath.wrist, unique(data.pp$castorID)[pp], savedir)
 }
+
+#Plot figure 2
+#pp = which(unique(data.pp$castorID) == "98MLM050")
+#day=1
+#create.overlayplot(data.app, filepath.hip, filepath.wrist, unique(data.pp$castorID)[pp], savedir)
+
 
 #### STEP 2: Descriptives duration, frequency and acceleration per reported activity category and movement behavior
 ### Descriptives for the activity categories
