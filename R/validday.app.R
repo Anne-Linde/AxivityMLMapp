@@ -12,7 +12,7 @@
 #' 
 #' @importFrom compositions acomp
 #' @importFrom zCompositions cmultRepl
-#' @importFrom pivotCoord robCompositions
+#' @importFrom robCompositions pivotCoord
 #' 
 #' @export
 #' 
