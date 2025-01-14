@@ -4,7 +4,7 @@
 \alias{categorize.structure.activities}
 \title{categorize.structure.activities}
 \usage{
-categorize.structure.activities(datadir, date)
+categorize.structure.activities(datadir, dater)
 }
 \arguments{
 \item{datadir}{A string representing the directory where the activity data files are located.}
