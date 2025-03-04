@@ -1,4 +1,4 @@
-### This script evaluates the construct validity by hypotheses testing (as described in section 2.4.3.2 of article):
+### This script evaluates the abilitiy of the MLM app to assess movement behaviors by hypotheses testing (as described in section 2.5.2 of article):
 ## 1) Plotting the acceleration distributions for the My Little Moves app categories
 ## 2) Fitting general linear mixed models with separate random intercepts for activity over participants
 ## 3) Fitting general linear mixed models with separate random intercepts for behavior over participants
