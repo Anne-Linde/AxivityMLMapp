@@ -1,2 +1,2 @@
 # AxivityMLMapp
-This repository holds the analyses files for the reliability and construct validity of the My Little Moves app for assessing 24-hour movement behaviors in children aged 0-4.
+This repository holds the analyses files corresponding to the article: Aassessing 24-hour movement behaviors in early childhood (0--4 years) - Reliability of the My Little Moves app and comparison with accelerometry 
