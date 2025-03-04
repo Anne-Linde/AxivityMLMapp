@@ -1,4 +1,4 @@
-### This script (as described in section 2.4.2 of the article)
+### This script (as described in section 2.5 of the article)
 ## 1) Creates normality and Q-Q plots for a) the My Little Moves app: the total duration (separate for activities and 24-h movement behaviors);
 ## and b) the accelerometer hip and wrist data (separate plots for each participant)
 ## 2) Transforms accelererometer data (log + small jitter)
@@ -15,8 +15,6 @@ filepath.hip <- paste0(filepath.axivity, "hip/nonwear_removed")
 filepath.wrist <- paste0(filepath.axivity, "wrist/nonwear_removed")
 
 # source functions directly from file, to be replaced by package installation:
-#install.packages("ReliabilityValidityStudyAxivityMLMapp")
-#library(ReliabilityValidityStudyAxivityMLMapp)
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
