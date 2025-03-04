@@ -1,4 +1,4 @@
-# This script was used for processing the My Little Moves app data (as described in section 2.4.1.1 of the article)
+# This script was used for processing the My Little Moves app data (as described in section 2.4.1 of the article)
 #The MLM app data was structured in the following steps:
 ## 1) .json file of the app data, milestoned into .csv files: each row represents an acitivity entry and the follow-up questions
 ## 2) Link the Castor ID to the MLM app data using the unique research codes
@@ -17,8 +17,6 @@ datadir.castor <- paste0("/Users/annelindelettink/Documents/Work MacBook Pro Ann
 filename.castor <- paste0("My_Little_Moves_export_", date.castor, ".csv")
 
 # source functions directly from file, to be replaced by package installation:
-#install.packages("ReliabilityValidityStudyAxivityMLMapp")
-#library(ReliabilityValidityStudyAxivityMLMapp)
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
