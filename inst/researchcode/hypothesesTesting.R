@@ -23,8 +23,6 @@ load(datadir)
 # data.pp$MAD.wrist<- data.pp$MAD.wrist*1000
 
 # source functions directly from file, to be replaced by package installation:
-#install.packages("ReliabilityValidityStudyAxivityMLMapp")
-#library(ReliabilityValidityStudyAxivityMLMapp)
 my_functions_folder =   "/Users/annelindelettink/Documents/Work MacBook Pro Annelinde/My Little Moves (MLM)/Comparison MLM-app and accelerometer data/AxivityMLMapp/R"
 for (function_file in dir(my_functions_folder, full.names = T)) source(function_file) #load functions
 
