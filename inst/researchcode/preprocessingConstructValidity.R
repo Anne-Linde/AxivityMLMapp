@@ -1,4 +1,4 @@
-## This script was used to preprocess the data for construct validity analyses (as described in section 2.4.3.1 of the article):
+## This script was used to preprocess the MLM app data for comparison with accelerometry (as described in section 2.4.3 of the article):
 # 1) Synchronize the Axivity data to the app entries 
 # 2) Report the duration, frequency and acceleration per activity category over all reported categories and 24-h movement behaviors
 
